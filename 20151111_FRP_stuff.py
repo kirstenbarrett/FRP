@@ -148,7 +148,9 @@ def MADfilt(kernel,kSize,minKsize,maxKsize):
         nghbrCnt = len(nghbrs)
         
         if ((nghbrCnt > minNcount) & (nghbrCnt > (minNfrac * ((kSize **2))))):
-            bgMAD = np.int(np.rint(np.mean(abs(centerVal - nghbrs))))
+            bgMean = np.int_(np.rint(np.mean(nghbrs)))
+            meanDists = np.abs(nghbrs - bgMean)
+            bgMAD = np.mean(meanDists)
             
     return bgMAD
 
@@ -187,6 +189,17 @@ def nRejectWaterFilt(kernel,kSize,minKsize,maxKsize):
         nRejectWater= len(kernel[np.where(kernel == -1)])
             
     return nRejectWater
+
+def nUnmaskedWaterFilt(kernel,kSize,minKsize,maxKsize): 
+    nUnmaskedWater = -4
+    kernel = kernel.reshape((kSize,kSize))
+    
+    centerVal = kernel[((kSize-1)/2),((kSize-1)/2)]
+    
+    if (((kSize == minKsize) | (centerVal == -4)) & (centerVal not in (range(-3,0)))):
+        nUnmaskedWater= len(kernel[np.where(kernel == -6)])      
+            
+    return nUnmaskedWater
 
 def runFilt(band,filtFunc,minKsize,maxKsize):
     filtBand = band
@@ -238,9 +251,9 @@ potFire[(dayFlag == 1)&(deltaT>10)] = 1
 potFire[(dayFlag == 0) & (allArrays['BAND21']>320)] = 1
 
 # ABSOLUTE THRESHOLD TEST (Kaufman et al. 1998) FOR REMOVING SUNGLINT
-##absValTest = np.zeros((nRows,nCols),dtype=np.int)
-##absValTest[(dayFlag == 1) & (allArrays['BAND21']>360) & (deltaT > 10) & (allArrays['BAND2x1k']<300)] = 1
-##absValTest[(dayFlag == 0) & (allArrays['BAND21']>305)] = 1
+absValTest = np.zeros((nRows,nCols),dtype=np.int)
+absValTest[(dayFlag == 1) & (allArrays['BAND21']>360) & (deltaT > 10) & (allArrays['BAND2x1k']<300)] = 1
+absValTest[(dayFlag == 0) & (allArrays['BAND21']>305)] = 1
 
 #########################################
 #CONTEXT TESTS (GIGLIO ET AL 2003)
@@ -292,17 +305,18 @@ B21rejFire[(b21rejMADfilt>=5)] = 1
 #COMBINE TESTS
 #DAYTIME "TENATIVE FIRES"
 fireLocTentative = deltaTMADfire*deltaTfire*B21fire
-fireLocB31andB21refFire = np.zeros((nRows,nCols),dtype=np.int)
-fireLocB31andB21refFire[np.where((B21rejFire == 1)|(B31fire == 1))]= 1
-fireLocTentativeDay = potFire*fireLocTentative*fireLocB31andB21refFire
+fireLocB31andB21rejFire = np.zeros((nRows,nCols),dtype=np.int)
+fireLocB31andB21rejFire[np.where((B21rejFire == 1)|(B31fire == 1))]= 1
+fireLocTentativeDay = potFire*fireLocTentative*fireLocB31andB21rejFire
 
 dayFires = np.zeros((nRows,nCols),dtype=np.int)
-dayFires[np.where((dayFlag == 1)&(fireLocTentativeDay == 1))] = 1
+dayFires[((dayFlag == 1)&(fireLocTentativeDay == 1))] = 1
+dayFires[absValTest == 1] = 1
 
 #NIGHTTIME DEFINITE FIRES
 nightFires = np.zeros((nRows,nCols),dtype=np.int)
-nightFires[np.where((dayFlag == 0)&(fireLocTentative == 1))] = 1
-
+nightFires[((dayFlag == 0)&(fireLocTentative == 1))] = 1
+nightFires[absValTest ==1] = 1
 ###########################################
 #####ADDITIONAL DAYTIME TESTS
 ##############################################
@@ -332,6 +346,9 @@ nRejectedWater[np.where(nRejectedWater<0)] = 0
                            
 sgTest10 = np.zeros((nRows,nCols),dtype=np.int)
 sgTest10[np.where((thetaG<12) & ((nWaterAdj+nRejectedWater)>0))] = 1
+
+sgAll = np.zeros((nRows,nCols),dtype=np.int)
+sgAll[(sgTest8 == 1) | (sgTest9 == 1) | (sgTest10 == 1)] = 1
 
 #desert boundary rejection
 
@@ -371,51 +388,62 @@ dbAll = dbTest11*dbTest12*dbTest13*dbTest14*dbTest15*dbTest16
 #CHUCK OUT ANYTHING THAT FULFILLS ALL DESERT BOUNDARY CRITERIA
 
 #coastal false alarm rejection
-####
+ndvi = (allArrays['BAND2x1k']+allArrays['BAND1x1k'])/(allArrays['BAND2x1k']+allArrays['BAND1x1k'])
+unmaskedWater = np.zeros((nRows,nCols),dtype=np.int)
+uwFlag = -6
+unmaskedWater[((ndvi<0) & (allArrays['BAND7x1k']<50)&(allArrays['BAND2x1k']<150))] = -6
+unmaskedWater[(bgMask == bgFlag)] = bgFlag
+Nuw = runFilt(unmaskedWater,nUnmaskedWaterFilt,minKsize,maxKsize)
+rejUnmaskedWater = np.zeros((nRows,nCols),dtype=np.int)
+rejUnmaskedWater[(absValTest == 0) & (Nuw>0)] = 1
+
+#COMBINE ALL MASKASKAKAKAKSSSSSSS
+allFires = dayFires+nightFires
+allFires[(sgAll == 1) | (dbAll == 1) | (rejUnmaskedWater == 1)] = 0
 
 ##SHOULD YIELD ~176 FIRES FOR 2004178.2120          
 #OUTPUT DF
 
-b21maskEXP = b21firesAllMask.astype(float)**8
-b21bgEXP = b21bgAllMask.astype(float)**8
-
-frpMW = 4.34 * (10**(-19)) * (b21maskEXP-b21bgEXP)#AREA TERM HERE
-
-frpMWabs = frpMW*potFire #APPLY ABSOLUTE TEMP THRESHOLD
-
-##################
-##AREA CALCULATION
-##################
-
+##b21maskEXP = b21firesAllMask.astype(float)**8
+##b21bgEXP = b21bgAllMask.astype(float)**8
+##
+##frpMW = 4.34 * (10**(-19)) * (b21maskEXP-b21bgEXP)#AREA TERM HERE
+##
+##frpMWabs = frpMW*potFire #APPLY ABSOLUTE TEMP THRESHOLD
+##
+####################
+####AREA CALCULATION
+####################
+##
+####S = (I-hp)/H
+####
+####where:
+####
+####I is the zero-based pixel index
+####hp is 1/2 the total number of pixels (zero-based)
+####    (for MODIS each scan is 1354 "1km" pixels, 1353 zero-based, so hp = 676.5)
+####H is the sensor altitude divided by the pixel size
+####    (for MODIS altitude is approximately 700km, so for "1km" pixels, H = 700/1)
+##
+##I = np.indices((nRows,nCols))[1]
+##hp = 676.6
+##H = 700
+##
 ##S = (I-hp)/H
 ##
-##where:
+####Compute the zenith angle:
+##Z = np.arcsin(1.111*np.sin(S))
 ##
-##I is the zero-based pixel index
-##hp is 1/2 the total number of pixels (zero-based)
-##    (for MODIS each scan is 1354 "1km" pixels, 1353 zero-based, so hp = 676.5)
-##H is the sensor altitude divided by the pixel size
-##    (for MODIS altitude is approximately 700km, so for "1km" pixels, H = 700/1)
-
-I = np.indices((nRows,nCols))[1]
-hp = 676.6
-H = 700
-
-S = (I-hp)/H
-
-##Compute the zenith angle:
-Z = np.arcsin(1.111*np.sin(S))
-
-##Compute the Along-track pixel size:
-Pn = 1 #Pixel size in km at nadir
-Pt = Pn*9*np.sin(Z-S)/np.sin(S)
-
-##Compute the Along-scan pixel size:
-Ps = Pt/np.cos(Z)
-
-areaKmSq = Pt * Ps
-
-frpMwKmSq = frpMWabs/areaKmSq
+####Compute the Along-track pixel size:
+##Pn = 1 #Pixel size in km at nadir
+##Pt = Pn*9*np.sin(Z-S)/np.sin(S)
+##
+####Compute the Along-scan pixel size:
+##Ps = Pt/np.cos(Z)
+##
+##areaKmSq = Pt * Ps
+##
+##frpMwKmSq = frpMWabs/areaKmSq
 
 ##inds=np.where(frpMwKmSq>0)
 ##FRPlats = allArrays['LAT'][inds]
