@@ -1,5 +1,6 @@
 #Just needs multi-dimensional footprint
 #and the sunglint mask...
+
 from scipy import ndimage
 import numpy as np
 import os
