@@ -1,3 +1,4 @@
+
 from scipy import ndimage
 import numpy as np
 import os
@@ -9,13 +10,13 @@ filList = os.listdir('.')
 filNam = 'MOD021KM.A2004178.2120.005.'
 bands = ['BAND1','BAND2','BAND7','BAND21','BAND22','BAND31','BAND32','landmask','SolarZenith','SolarAzimuth','SensorZenith','SensorAzimuth','LAT','LON']
 
-#READ IN AL REFLECTANCE AND EMITTED BANDS
+#READ IN ALL REFLECTANCE AND EMITTED BANDS
 allArrays = {}
 for b in bands:
     fullFilName = filNam + b + '.tif'
     ds = gdal.Open(fullFilName)
     data = np.array(ds.GetRasterBand(1).ReadAsArray())
-    data = data[1283:1292,570:579] #TESTING DATA
+    data = data[1274:1309,549:584] #TESTING DATA 
 
     if b == 'BAND21' or b == 'BAND22' or b == 'BAND31' or b == 'BAND32':
         data = np.int_(np.rint(data))
@@ -72,7 +73,7 @@ b31CloudWaterMasked = np.copy(allArrays['BAND31'])
 b31CloudWaterMasked [np.where(waterMask == waterFlag)] = waterFlag
 b31CloudWaterMasked [np.where(cloudMask == cloudFlag)] = cloudFlag
 
-deltaT = np.copy(allArrays['BAND21']) - np.copy(allArrays['BAND31'])
+deltaT = np.abs(np.copy(allArrays['BAND21']) - np.copy(allArrays['BAND31']))
 deltaTCloudWaterMasked = np.copy(deltaT)
 deltaTCloudWaterMasked[np.where(waterMask == waterFlag)] = waterFlag
 deltaTCloudWaterMasked[np.where(cloudMask == cloudFlag)] = cloudFlag
@@ -89,10 +90,8 @@ b21saturationVal = 450 #???
 
 bgFlag = -3
 bgMask = np.zeros((nRows,nCols),dtype=np.int)
-bgMask[np.where((dayFlag == 1) & (allArrays['BAND21'] >325))] = bgFlag
-bgMask[np.where((dayFlag == 1) & (deltaT >20))] = bgFlag
-bgMask[np.where((dayFlag == 0) & (deltaT >310))] = bgFlag
-bgMask[np.where((dayFlag == 0) & (deltaT >10))] = bgFlag
+bgMask[np.where((dayFlag == 1) & (allArrays['BAND21'] >325) & (deltaT >20))] = bgFlag
+bgMask[np.where((dayFlag == 0) & (deltaT >310)& (deltaT >10))] = bgFlag
 
 b21bgMask = np.copy(b21CloudWaterMasked)
 b21bgMask[np.where(bgMask == bgFlag)] = bgFlag
@@ -246,13 +245,12 @@ if (np.nanmax(b21CloudWaterMasked) > b21saturationVal):
 
 ####POTENTIAL FIRE TEST
 potFire = np.zeros((nRows,nCols),dtype=np.int)
-potFire[(dayFlag == 1)&(allArrays['BAND21']>310)] = 1
-potFire[(dayFlag == 1)&(deltaT>10)] = 1
-potFire[(dayFlag == 0) & (allArrays['BAND21']>320)] = 1
+potFire[(dayFlag == 1)&(allArrays['BAND21']>310)&(deltaT>10)&(allArrays['BAND2x1k']<300)] = 1
+potFire[(dayFlag == 0)&(allArrays['BAND21']>305)&(deltaT>10)] = 1
 
 # ABSOLUTE THRESHOLD TEST (Kaufman et al. 1998) FOR REMOVING SUNGLINT
 absValTest = np.zeros((nRows,nCols),dtype=np.int)
-absValTest[(dayFlag == 1) & (allArrays['BAND21']>360) & (deltaT > 10) & (allArrays['BAND2x1k']<300)] = 1
+absValTest[(dayFlag == 1) & (allArrays['BAND21']>360)] = 1
 absValTest[(dayFlag == 0) & (allArrays['BAND21']>305)] = 1
 
 #########################################
@@ -266,20 +264,18 @@ deltaTmeanFilt = runFilt(deltaTbgMask,meanFilt,minKsize,maxKsize)
 ####deltaT MAD Filtering
 deltaTMADFilt = runFilt(deltaTbgMask,MADfilt,minKsize,maxKsize) 
 deltaTMADfire = np.zeros((nRows,nCols),dtype=np.int)
-deltaTMADfire[abs(deltaT)>(abs(deltaTmeanFilt) + (3.5*deltaTMADfire))] = 1
-
+deltaTMADfire[deltaT>(deltaTmeanFilt + (3.5*deltaTMADFilt))] = 1
 
 ####CONTEXT FIRE TEST 3
 deltaTfire = np.zeros((nRows,nCols),dtype=np.int)
-deltaTfire[np.where(abs(deltaT) > (abs(deltaTmeanFilt) + 6))] = 1 
+deltaTfire[np.where(deltaT > (deltaTmeanFilt + 6))] = 1 
 
 ####CONTEXT FIRE TEST 4
 B21fire = np.zeros((nRows,nCols),dtype=np.int)
 b21MADfilt = runFilt(b21bgMask,MADfilt,minKsize,maxKsize) 
 B21fire[(b21CloudWaterMasked > (b21meanFilt + (3*b21MADfilt)))] = 1
 
-
-#POTENTIAL FIRE TEST 5
+####CONTEXT  FIRE TEST 5
 b31meanFilt = runFilt(b31bgMask,meanFilt,minKsize,maxKsize)
 b31MADfilt = runFilt(b31bgMask,MADfilt,minKsize,maxKsize) 
 
@@ -287,36 +283,33 @@ B31fire = np.zeros((nRows,nCols),dtype=np.int)
 B31fire[(b31CloudWaterMasked > (b31meanFilt + b31MADfilt - 4))] = 1
 
 ###CONTEXT FIRE TEST 6
-rejectedBGmask = np.zeros((nRows, nCols),dtype=np.int)
-rejectedBGmask[(bgMask == bgFlag)] = 1
 rejB21bgFires = np.copy(b21CloudWaterMasked)
-
-rejB21bgFires[(bgMask != bgFlag)] = bgFlag
+rejB21bgFires[(bgMask != bgFlag)] = bgFlag #PROCESS BG PIXELS
 
 b21rejMADfilt = runFilt(rejB21bgFires,MADfilt,minKsize,maxKsize)
 
 B21rejFire = np.zeros((nRows,nCols),dtype=np.int)
-B21rejFire[(b21rejMADfilt>=5)] = 1
+B21rejFire[(b21rejMADfilt>5)] = 1
 
 ############################################
 ####DESERT BOUNDARY TESTS
 ############################################
 
 #COMBINE TESTS
-#DAYTIME "TENATIVE FIRES"
+#DAYTIME "TENTATIVE FIRES"
 fireLocTentative = deltaTMADfire*deltaTfire*B21fire
+
 fireLocB31andB21rejFire = np.zeros((nRows,nCols),dtype=np.int)
 fireLocB31andB21rejFire[np.where((B21rejFire == 1)|(B31fire == 1))]= 1
 fireLocTentativeDay = potFire*fireLocTentative*fireLocB31andB21rejFire
 
 dayFires = np.zeros((nRows,nCols),dtype=np.int)
-dayFires[((dayFlag == 1)&(fireLocTentativeDay == 1))] = 1
-dayFires[absValTest == 1] = 1
+dayFires[(dayFlag == 1)&((absValTest == 1)|(fireLocTentativeDay ==1))] = 1
 
 #NIGHTTIME DEFINITE FIRES
 nightFires = np.zeros((nRows,nCols),dtype=np.int)
-nightFires[((dayFlag == 0)&(fireLocTentative == 1))] = 1
-nightFires[absValTest ==1] = 1
+nightFires[((dayFlag == 0)&((fireLocTentative == 1)|absValTest == 1))] = 1
+
 ###########################################
 #####ADDITIONAL DAYTIME TESTS
 ##############################################
@@ -353,6 +346,7 @@ sgAll[(sgTest8 == 1) | (sgTest9 == 1) | (sgTest10 == 1)] = 1
 #desert boundary rejection
 
 nValid = runFilt(b21bgMask,nValidFilt,minKsize,maxKsize)
+
 nRejectedBG = runFilt(bgMask,nRejectBGfireFilt,minKsize,maxKsize)
 nRejectedBG[np.where(nRejectedBG<0)] = 0
 
@@ -371,18 +365,18 @@ dbTest13[np.where(allArrays['BAND2x1k']>150)] = 1
 #DB TEST 14
 #ON REJECTED PIXELS MEAN T4
 b21rejBG = np.copy(b21CloudWaterMasked)
-b21rejBG[np.where(bgMask != bgFlag)] = bgFlag
+b21rejBG[np.where(bgMask != bgFlag)] = bgFlag #Evalate pixels rejected as BG
 b21rejMeanFilt = runFilt(b21rejBG,meanFilt,minKsize,maxKsize)
 dbTest14 = np.zeros((nRows,nCols),dtype=np.int)
-dbTest14[(b21rejMeanFilt<345)] = 1
+dbTest14[(b21rejMeanFilt<345)&(b21rejMeanFilt != -4)] = 1
 
 #DB TEST 15
 dbTest15 = np.zeros((nRows,nCols),dtype=np.int)
-dbTest15[(b21rejMADfilt>=3)] = 1
+dbTest15[(b21rejMADfilt<3)&(b21rejMeanFilt != -4)] = 1
 
 #DB TEST 16
 dbTest16 = np.zeros((nRows,nCols),dtype=np.int)
-dbTest16[(b21CloudWaterMasked<(b21rejMeanFilt+(6*b21rejMADfilt)))] = 1
+dbTest16[(b21CloudWaterMasked<(b21rejMeanFilt+(6*b21rejMADfilt)))&(b21rejMADfilt != -4)&(b21rejMeanFilt != -4)] = 1
 
 dbAll = dbTest11*dbTest12*dbTest13*dbTest14*dbTest15*dbTest16
 #CHUCK OUT ANYTHING THAT FULFILLS ALL DESERT BOUNDARY CRITERIA
@@ -401,56 +395,63 @@ rejUnmaskedWater[(absValTest == 0) & (Nuw>0)] = 1
 allFires = dayFires+nightFires
 allFires[(sgAll == 1) | (dbAll == 1) | (rejUnmaskedWater == 1)] = 0
 
+#Currently yields 502938 fires, perhaps many outside of study area?
 ##SHOULD YIELD ~176 FIRES FOR 2004178.2120          
 #OUTPUT DF
 
-##b21maskEXP = b21firesAllMask.astype(float)**8
-##b21bgEXP = b21bgAllMask.astype(float)**8
-##
-##frpMW = 4.34 * (10**(-19)) * (b21maskEXP-b21bgEXP)#AREA TERM HERE
-##
-##frpMWabs = frpMW*potFire #APPLY ABSOLUTE TEMP THRESHOLD
-##
-####################
-####AREA CALCULATION
-####################
-##
-####S = (I-hp)/H
-####
-####where:
-####
-####I is the zero-based pixel index
-####hp is 1/2 the total number of pixels (zero-based)
-####    (for MODIS each scan is 1354 "1km" pixels, 1353 zero-based, so hp = 676.5)
-####H is the sensor altitude divided by the pixel size
-####    (for MODIS altitude is approximately 700km, so for "1km" pixels, H = 700/1)
-##
-##I = np.indices((nRows,nCols))[1]
-##hp = 676.6
-##H = 700
-##
+b21firesAllMask = allFires*allArrays['BAND21']
+b21bgAllMask = allFires*b21meanFilt
+
+b21maskEXP = b21firesAllMask.astype(float)**8
+b21bgEXP = b21bgAllMask.astype(float)**8
+
+frpMW = 4.34 * (10**(-19)) * (b21maskEXP-b21bgEXP)#AREA TERM HERE
+
+frpMWabs = frpMW*potFire #APPLY ABSOLUTE TEMP THRESHOLD
+
+
+
+##################
+##AREA CALCULATION
+##################
+
 ##S = (I-hp)/H
 ##
-####Compute the zenith angle:
-##Z = np.arcsin(1.111*np.sin(S))
+##where:
 ##
-####Compute the Along-track pixel size:
-##Pn = 1 #Pixel size in km at nadir
-##Pt = Pn*9*np.sin(Z-S)/np.sin(S)
-##
-####Compute the Along-scan pixel size:
-##Ps = Pt/np.cos(Z)
-##
-##areaKmSq = Pt * Ps
-##
-##frpMwKmSq = frpMWabs/areaKmSq
+##I is the zero-based pixel index
+##hp is 1/2 the total number of pixels (zero-based)
+##    (for MODIS each scan is 1354 "1km" pixels, 1353 zero-based, so hp = 676.5)
+##H is the sensor altitude divided by the pixel size
+##    (for MODIS altitude is approximately 700km, so for "1km" pixels, H = 700/1)
 
-##inds=np.where(frpMwKmSq>0)
-##FRPlats = allArrays['LAT'][inds]
-##FRPlons =allArrays['LON'][inds]
-##FrpInds = frpMwKmSq[inds]
-#exportCSV = np.column_stack([FRPlons,FRPlats,FrpInds])
-#np.savetxt("frpMwKm_2004178_2120.csv", exportCSV, delimiter=",")
+I = np.indices((nRows,nCols))[1]
+hp = 676.6
+H = 700
+
+S = (I-hp)/H
+
+##Compute the zenith angle:
+Z = np.arcsin(1.111*np.sin(S))
+
+##Compute the Along-track pixel size:
+Pn = 1 #Pixel size in km at nadir
+Pt = Pn*9*np.sin(Z-S)/np.sin(S)
+
+##Compute the Along-scan pixel size:
+Ps = Pt/np.cos(Z)
+
+areaKmSq = Pt * Ps
+
+frpMwKmSq = frpMWabs/areaKmSq
+
+inds=np.where((frpMwKmSq>0)&(frpMwKmSq<1000))
+FRPlats = allArrays['LAT'][inds]
+FRPlons =allArrays['LON'][inds]
+FrpInds = frpMwKmSq[inds]
+exportCSV = np.column_stack([FRPlons,FRPlats,FrpInds])
+np.savetxt("frpMwKm_2004178_2120_20151115iv.csv", exportCSV, delimiter=",")
+
 
 
 
