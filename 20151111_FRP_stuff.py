@@ -1,13 +1,17 @@
-
+#!/usr/bin/python
 from scipy import ndimage
 import numpy as np
 import os
 from osgeo import gdal
 from collections import namedtuple
+import sys
 
-os.chdir('/Users/kirsten/Documents/data/MODIS/Boundary_swaths/20151110_new')
-filList = os.listdir('.')
-filNam = 'MOD021KM.A2004178.2120.005.'
+filNam = sys.argv[1]+'.'
+
+
+##os.chdir('/Users/kirsten/Documents/data/MODIS/Boundary_swaths/20151110_new')
+##filList = os.listdir('.')
+##filNam = 'MOD021KM.A2004178.2120.005.'
 bands = ['BAND1','BAND2','BAND7','BAND21','BAND22','BAND31','BAND32','landmask','SolarZenith','SolarAzimuth','SensorZenith','SensorAzimuth','LAT','LON']
 
 #READ IN ALL REFLECTANCE AND EMITTED BANDS
@@ -468,7 +472,7 @@ FRPlats = allArrays['LAT'][inds]
 FRPlons =allArrays['LON'][inds]
 FrpInds = frpMwKmSq[inds]
 exportCSV = np.column_stack([FRPlons,FRPlats,FrpInds])
-np.savetxt("frpMwKm_2004178_2120_20151117_float.csv", exportCSV, delimiter=",")
+np.savetxt(filNam+'frp.csv', exportCSV, delimiter=",")
 
 
 
