@@ -6,12 +6,11 @@ from osgeo import gdal
 from collections import namedtuple
 import sys
 
-filNam = sys.argv[1]+'.'
 
 
-##os.chdir('/Users/kirsten/Documents/data/MODIS/Boundary_swaths/20151110_new')
-##filList = os.listdir('.')
-##filNam = 'MOD021KM.A2004178.2120.005.'
+os.chdir('/Users/kirsten/Documents/data/MODIS/Boundary_swaths/20151110_new')
+filList = os.listdir('.')
+filNam = 'MOD021KM.A2004178.2120.005.'
 bands = ['BAND1','BAND2','BAND7','BAND21','BAND22','BAND31','BAND32','landmask','SolarZenith','SolarAzimuth','SensorZenith','SensorAzimuth','LAT','LON']
 
 #READ IN ALL REFLECTANCE AND EMITTED BANDS
@@ -20,8 +19,9 @@ for b in bands:
     fullFilName = filNam + b + '.tif'
     ds = gdal.Open(fullFilName)
     data = np.array(ds.GetRasterBand(1).ReadAsArray())
-#    data = data[1283:1293,570:575] #TESTING DATA 
-
+#    data = data[1472:1546,566:656] #BOUNDARY FIRE AREA
+    data = data[1105:2029,84:1065] #BOREAL AK AREA
+    
     if b == 'BAND21' or b == 'BAND22' or b == 'BAND31' or b == 'BAND32':
 #        data = np.int_(np.rint(data))
         data = data
@@ -65,7 +65,7 @@ b31CloudWaterMasked = np.copy(allArrays['BAND31'])
 b31CloudWaterMasked [np.where(waterMask == waterFlag)] = waterFlag
 b31CloudWaterMasked [np.where(cloudMask == cloudFlag)] = cloudFlag
 
-deltaT = np.abs(np.copy(allArrays['BAND21']) - np.copy(allArrays['BAND31']))
+deltaT = np.abs(allArrays['BAND21'] - allArrays['BAND31'])
 deltaTCloudWaterMasked = np.copy(deltaT)
 deltaTCloudWaterMasked[np.where(waterMask == waterFlag)] = waterFlag
 deltaTCloudWaterMasked[np.where(cloudMask == cloudFlag)] = cloudFlag
@@ -82,6 +82,7 @@ b21saturationVal = 450 #???
 
 bgFlag = -3
 bgMask = np.zeros((nRows,nCols),dtype=np.int)
+
 with np.errstate(invalid='ignore'):
     bgMask[np.where((dayFlag == 1) & (allArrays['BAND21'] >325) & (deltaT >20))] = bgFlag
     bgMask[np.where((dayFlag == 0) & (deltaT >310)& (deltaT >10))] = bgFlag
@@ -472,8 +473,8 @@ FRPlats = allArrays['LAT'][inds]
 FRPlons =allArrays['LON'][inds]
 FrpInds = frpMwKmSq[inds]
 exportCSV = np.column_stack([FRPlons,FRPlats,FrpInds])
-np.savetxt(filNam+'frp.csv', exportCSV, delimiter=",")
-
+##np.savetxt(filNam+'frp.csv', exportCSV, delimiter=",")
+##
 
 
 
