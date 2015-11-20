@@ -1,27 +1,28 @@
-#!/usr/bin/python
 from scipy import ndimage
 import numpy as np
 import os
 from osgeo import gdal
-from collections import namedtuple
-import sys
 
+#Geometric settings for sampling
+minNcount = 8
+minNfrac = 0.25
+minKsize = 5
+maxKsize = 21
+b21saturationVal = 450 #???
 
-
-os.chdir('/Users/kirsten/Documents/data/MODIS/Boundary_swaths/20151110_new')
+#OPEN INPUT BANDS
 filList = os.listdir('.')
 filNam = 'MOD021KM.A2004178.2120.005.'
-bands = ['BAND1','BAND2','BAND7','BAND21','BAND22','BAND31','BAND32','landmask','SolarZenith','SolarAzimuth','SensorZenith','SensorAzimuth','LAT','LON']
+bands = ['BAND1','BAND2','BAND7','BAND21','BAND22','BAND31','BAND32','LANDMASK','SolarZenith','SolarAzimuth','SensorZenith','SensorAzimuth','LAT','LON']
 
-#READ IN ALL REFLECTANCE AND EMITTED BANDS
 allArrays = {}
 for b in bands:
     fullFilName = filNam + b + '.tif'
     ds = gdal.Open(fullFilName)
     data = np.array(ds.GetRasterBand(1).ReadAsArray())
-#    data = data[1472:1546,566:656] #BOUNDARY FIRE AREA
-    data = data[1105:2029,84:1065] #BOREAL AK AREA
-    
+    data = data[1472:1546,566:656] #BOUNDARY FIRE AREA
+ #   data = data[1105:2029,84:1065] #BOREAL AK AREA
+
     if b == 'BAND21' or b == 'BAND22' or b == 'BAND31' or b == 'BAND32':
 #        data = np.int_(np.rint(data))
         data = data
@@ -34,7 +35,6 @@ for b in bands:
 [nRows,nCols] = np.shape(allArrays['BAND21'])
 
 
-
 #DAY/NIGHT FLAG
 dayFlag = np.zeros((nRows,nCols),dtype=np.int)
 dayFlag[np.where(allArrays['SolarZenith'] < 8500)] = 1
@@ -44,7 +44,7 @@ cloudFlag = -2
 
 #CREATE WATER MASK
 waterMask = np.zeros((nRows,nCols),dtype=np.int)
-waterMask[np.where(allArrays['landmask']!=1)] = waterFlag
+waterMask[np.where(allArrays['LANDMASK']!=1)] = waterFlag
 
 #CREATE CLOUD MASK (SET DATATYPE)
 cloudMask =np.zeros((nRows,nCols),dtype=np.int)
@@ -70,16 +70,7 @@ deltaTCloudWaterMasked = np.copy(deltaT)
 deltaTCloudWaterMasked[np.where(waterMask == waterFlag)] = waterFlag
 deltaTCloudWaterMasked[np.where(cloudMask == cloudFlag)] = cloudFlag
 
-##########################
-##AFTER ALL THE DATA HAVE BEEN READ IN
-##########################
-
-minNcount = 8
-minNfrac = 0.25
-minKsize = 5
-maxKsize = 21
-b21saturationVal = 450 #???
-
+#CREATE A MASK FOR BACKGROUND SAMPLING
 bgFlag = -3
 bgMask = np.zeros((nRows,nCols),dtype=np.int)
 
@@ -98,10 +89,12 @@ with np.errstate(invalid='ignore'):
 
     deltaTbgMask = np.copy(deltaTCloudWaterMasked)
     deltaTbgMask[np.where(bgMask == bgFlag)] = bgFlag
+
 #############################
-#ALL REQUIRED FUNCTION DEFS
+#FUNCTION DEFINITIONS
 #############################
 
+#OMIT SCANLINE NEIGHBORS FROM SAMPLING
 def makeFootprint(kSize):
     fpZeroLine = (kSize-1)/2
     fpZeroColStart = fpZeroLine-1
@@ -111,90 +104,94 @@ def makeFootprint(kSize):
 
     return fp
 
+#RETURN MEAN OF NON-BACKGROUND FIRE NEIGHBORS
 def meanFilt(kernel,kSize,minKsize,maxKsize):
     bgMean = -4
     kernel = kernel.reshape((kSize,kSize))
-    
+
     centerVal = kernel[((kSize-1)/2),((kSize-1)/2)]
-    
+
     if (((kSize == minKsize) | (centerVal == -4)) & (centerVal not in (range(-2,0)))):
         fpMask = makeFootprint(kSize)
         kernel[np.where(fpMask < 0)] = -5
         nghbrs = kernel[np.where(kernel > 0)]
         nghbrCnt = len(nghbrs)
-        
+
         if ((nghbrCnt > minNcount) & (nghbrCnt > (minNfrac * ((kSize **2))))):
- #           bgMean = np.int_(np.rint(np.mean(nghbrs)))
              bgMean = np.mean(nghbrs)
     return bgMean
 
+#RETURN MEAN ABSOLUTE DEVIATION OF NON-BACKGROUND FIRE NEIGHBORS
 def MADfilt(kernel,kSize,minKsize,maxKsize):
     bgMAD = -4
     kernel = kernel.reshape((kSize,kSize))
-    
+
     centerVal = kernel[((kSize-1)/2),((kSize-1)/2)]
-    
+
     if (((kSize == minKsize) | (centerVal == -4)) & (centerVal not in (range(-2,0)))):
         fpMask = makeFootprint(kSize)
         kernel[np.where(fpMask < 0)] = -5
         nghbrs = kernel[np.where(kernel > 0)]
         nghbrCnt = len(nghbrs)
-        
+
         if ((nghbrCnt > minNcount) & (nghbrCnt > (minNfrac * ((kSize **2))))):
- #           bgMean = np.int_(np.rint(np.mean(nghbrs)))
             bgMean = np.mean(nghbrs)
             meanDists = np.abs(nghbrs - bgMean)
             bgMAD = np.mean(meanDists)
-            
+
     return bgMAD
 
-
+#RETURN NUMBER OF NON-BACKGROUND FIRE, NON-CLOUD, NON-WATER NEIGHBORS
 def nValidFilt(kernel,kSize,minKsize,maxKsize): #USE BG mask files
     nghbrCnt = -4
     kernel = kernel.reshape((kSize,kSize))
-    
+
     centerVal = kernel[((kSize-1)/2),((kSize-1)/2)]
-    
+
     if (((kSize == minKsize) | (centerVal == -4)) & (centerVal not in (range(-3,0)))):
         fpMask = makeFootprint(kSize)
         kernel[np.where(fpMask < 0)] = -5
         nghbrs = kernel[np.where(kernel > 0)]
         nghbrCnt = len(nghbrs)
-            
+
     return nghbrCnt
 
-def nRejectBGfireFilt(kernel,kSize,minKsize,maxKsize): 
+#RETURN NUMBER OF NEIGHBORS REJECTED AS BACKGROUND
+def nRejectBGfireFilt(kernel,kSize,minKsize,maxKsize):
     nRejectBGfire = -4
     kernel = kernel.reshape((kSize,kSize))
     centerVal = kernel[((kSize-1)/2),((kSize-1)/2)]
-    
+
     if (((kSize == minKsize) | (centerVal == -4))):
         nRejectBGfire = len(kernel[np.where(kernel == -3)])
-            
+
     return nRejectBGfire
 
-def nRejectWaterFilt(kernel,kSize,minKsize,maxKsize): 
+#RETURN NUMBER OF NEIGHBORS REJECTED AS WATER
+def nRejectWaterFilt(kernel,kSize,minKsize,maxKsize):
     nRejectWater = -4
     kernel = kernel.reshape((kSize,kSize))
-    
+
     centerVal = kernel[((kSize-1)/2),((kSize-1)/2)]
-    
+
     if (((kSize == minKsize) | (centerVal == -4))):
         nRejectWater= len(kernel[np.where(kernel == -1)])
-            
+
     return nRejectWater
 
-def nUnmaskedWaterFilt(kernel,kSize,minKsize,maxKsize): 
+#RETURN NUMBER OF 'UNMASKED WATER' NEIGHBORS
+def nUnmaskedWaterFilt(kernel,kSize,minKsize,maxKsize):
     nUnmaskedWater = -4
     kernel = kernel.reshape((kSize,kSize))
-    
+
     centerVal = kernel[((kSize-1)/2),((kSize-1)/2)]
-    
+
     if (((kSize == minKsize) | (centerVal == -4)) & (centerVal not in (range(-3,0)))):
-        nUnmaskedWater= len(kernel[np.where(kernel == -6)])      
-            
+        nUnmaskedWater= len(kernel[np.where(kernel == -6)])
+
     return nUnmaskedWater
 
+#RUNS FILTERS ON PROGRESSIVELY LARGER KERNEL SIZES, COMBINES RESULTS FROM SMALLEST KSIZE
 def runFilt(band,filtFunc,minKsize,maxKsize):
     filtBand = band
     kSize = minKsize
@@ -212,32 +209,16 @@ def runFilt(band,filtFunc,minKsize,maxKsize):
     while kSize <= maxKsize:
         bandFilt[np.where(bandFilt == -4)] = bandFilts['bandFilt'+str(kSize)][np.where(bandFilt == -4)]
         kSize += 2
-        
+
     return bandFilt
 
+#DETERMINES IF CENTER PIXEL IS ADJACENT TO A FILTERED WATER PIXEL
 def adjWater(kernel):
     nghbors = kernel[range(0,4)+range(5,9)]
-    waterNghbors = kernel[np.where(nghbors == 1)]   
+    waterNghbors = kernel[np.where(nghbors == 1)]
     nWaterNghbr = len(waterNghbors)
     return nWaterNghbr
-    
 
-
-############################
-####B21 MEAN FILTER
-############################
-
-b21meanFilt = runFilt(b21bgMask,meanFilt,minKsize,maxKsize) 
-b21minusBG = np.copy(b21CloudWaterMasked) - np.copy(b21meanFilt) #introduces weird flags, but all < 0
-
-##TEST FOR SATURATION IN BAND 21
-if (np.nanmax(b21CloudWaterMasked) > b21saturationVal):
-
-    b22meanFilt = runFilt(b22bgMask,meanFilt,minKsize,maxKsize)
-    b22minusBG = np.copy(b22CloudWaterMasked)  - np.copy(b22meanFilt)
-
-    with np.errstate(invalid='ignore'):
-        b21minusBG[(b21CloudWaterMasked >= b21saturationVal)] = b22minusBG[(b21CloudWaterMasked >= b21saturationVal)]
 
 ####POTENTIAL FIRE TEST
 potFire = np.zeros((nRows,nCols),dtype=np.int)
@@ -252,15 +233,14 @@ with np.errstate(invalid='ignore'):
     absValTest[(dayFlag == 0) & (allArrays['BAND21']>305)] = 1
 
 #########################################
-#CONTEXT TESTS (GIGLIO ET AL 2003)
+#CONTEXT TESTS
 #########################################
 
-
 ####CONTEXT FIRE TEST 2:
-deltaTmeanFilt = runFilt(deltaTbgMask,meanFilt,minKsize,maxKsize) 
+deltaTmeanFilt = runFilt(deltaTbgMask,meanFilt,minKsize,maxKsize)
 
 ####deltaT MAD Filtering
-deltaTMADFilt = runFilt(deltaTbgMask,MADfilt,minKsize,maxKsize) 
+deltaTMADFilt = runFilt(deltaTbgMask,MADfilt,minKsize,maxKsize)
 deltaTMADfire = np.zeros((nRows,nCols),dtype=np.int)
 with np.errstate(invalid='ignore'):
     deltaTMADfire[deltaT>(deltaTmeanFilt + (3.5*deltaTMADFilt))] = 1
@@ -268,9 +248,21 @@ with np.errstate(invalid='ignore'):
 ####CONTEXT FIRE TEST 3
 deltaTfire = np.zeros((nRows,nCols),dtype=np.int)
 with np.errstate(invalid='ignore'):
-    deltaTfire[np.where(deltaT > (deltaTmeanFilt + 6))] = 1 
+    deltaTfire[np.where(deltaT > (deltaTmeanFilt + 6))] = 1
 
 ####CONTEXT FIRE TEST 4
+b21meanFilt = runFilt(b21bgMask,meanFilt,minKsize,maxKsize)
+b21minusBG = np.copy(b21CloudWaterMasked) - np.copy(b21meanFilt)
+
+##TEST FOR SATURATION IN BAND 21
+if (np.nanmax(b21CloudWaterMasked) > b21saturationVal):
+
+    b22meanFilt = runFilt(b22bgMask,meanFilt,minKsize,maxKsize)
+    b22minusBG = np.copy(b22CloudWaterMasked)  - np.copy(b22meanFilt)
+
+    with np.errstate(invalid='ignore'):
+        b21minusBG[(b21CloudWaterMasked >= b21saturationVal)] = b22minusBG[(b21CloudWaterMasked >= b21saturationVal)]
+
 B21fire = np.zeros((nRows,nCols),dtype=np.int)
 b21MADfilt = runFilt(b21bgMask,MADfilt,minKsize,maxKsize)
 with np.errstate(invalid='ignore'):
@@ -278,7 +270,7 @@ with np.errstate(invalid='ignore'):
 
 ####CONTEXT  FIRE TEST 5
 b31meanFilt = runFilt(b31bgMask,meanFilt,minKsize,maxKsize)
-b31MADfilt = runFilt(b31bgMask,MADfilt,minKsize,maxKsize) 
+b31MADfilt = runFilt(b31bgMask,MADfilt,minKsize,maxKsize)
 
 B31fire = np.zeros((nRows,nCols),dtype=np.int)
 B31fire[(b31CloudWaterMasked > (b31meanFilt + b31MADfilt - 4))] = 1
@@ -294,12 +286,7 @@ B21rejFire = np.zeros((nRows,nCols),dtype=np.int)
 with np.errstate(invalid='ignore'):
     B21rejFire[(b21rejMADfilt>5)] = 1
 
-############################################
-####DESERT BOUNDARY TESTS
-############################################
-
-#COMBINE TESTS
-#DAYTIME "TENTATIVE FIRES"
+#COMBINE TESTS TO CREATE "TENTATIVE FIRES"
 fireLocTentative = deltaTMADfire*deltaTfire*B21fire
 
 fireLocB31andB21rejFire = np.zeros((nRows,nCols),dtype=np.int)
@@ -311,21 +298,20 @@ dayFires = np.zeros((nRows,nCols),dtype=np.int)
 with np.errstate(invalid='ignore'):
     dayFires[(dayFlag == 1)&((absValTest == 1)|(fireLocTentativeDay ==1))] = 1
 
-#NIGHTTIME DEFINITE FIRES
+#NIGHTTIME DEFINITE FIRES (NO FURTHER TESTS)
 nightFires = np.zeros((nRows,nCols),dtype=np.int)
 with np.errstate(invalid='ignore'):
     nightFires[((dayFlag == 0)&((fireLocTentative == 1)|absValTest == 1))] = 1
 
 ###########################################
-#####ADDITIONAL DAYTIME TESTS
+#####ADDITIONAL DAYTIME TESTS ON TENTATIVE FIRES
 ##############################################
 
-#sunglint rejection
+#SUNGLINT REJECTION
 relAzimuth = allArrays['SensorAzimuth']-allArrays['SolarAzimuth']
 cosThetaG = (np.cos(allArrays['SensorZenith'])*np.cos(allArrays['SolarZenith']))- (np.sin(allArrays['SensorZenith'])*np.sin(allArrays['SolarZenith'])*np.cos(relAzimuth))
 thetaG = np.arccos(cosThetaG)
 thetaG = (thetaG/3.141592)*180
-#thetaG = ((thetaG+3.141592)/(2*3.141592))*360
 
 #SUNGLINT TEST 8
 sgTest8 = np.zeros((nRows,nCols),dtype=np.int)
@@ -345,7 +331,7 @@ nWaterAdj = ndimage.generic_filter(waterLoc, adjWater, size = 3)
 nRejectedWater = runFilt(waterMask,nRejectWaterFilt,minKsize,maxKsize)
 with np.errstate(invalid='ignore'):
     nRejectedWater[np.where(nRejectedWater<0)] = 0
-                           
+
 sgTest10 = np.zeros((nRows,nCols),dtype=np.int)
 with np.errstate(invalid='ignore'):
     sgTest10[np.where((thetaG<12) & ((nWaterAdj+nRejectedWater)>0))] = 1
@@ -354,7 +340,7 @@ sgAll = np.zeros((nRows,nCols),dtype=np.int)
 with np.errstate(invalid='ignore'):
     sgAll[(sgTest8 == 1) | (sgTest9 == 1) | (sgTest10 == 1)] = 1
 
-#desert boundary rejection
+#DESERT BOUNDARY REJECTION
 
 nValid = runFilt(b21bgMask,nValidFilt,minKsize,maxKsize)
 
@@ -378,7 +364,6 @@ with np.errstate(invalid='ignore'):
     dbTest13[np.where(allArrays['BAND2x1k']>150)] = 1
 
 #DB TEST 14
-#ON REJECTED PIXELS MEAN T4
 b21rejBG = np.copy(b21CloudWaterMasked)
 b21rejBG[np.where(bgMask != bgFlag)] = bgFlag #Evalate pixels rejected as BG
 b21rejMeanFilt = runFilt(b21rejBG,meanFilt,minKsize,maxKsize)
@@ -396,10 +381,10 @@ dbTest16 = np.zeros((nRows,nCols),dtype=np.int)
 with np.errstate(invalid='ignore'):
     dbTest16[(b21CloudWaterMasked<(b21rejMeanFilt+(6*b21rejMADfilt)))&(b21rejMADfilt != -4)&(b21rejMeanFilt != -4)] = 1
 
+#REJECT ANYTHING THAT FULFILLS ALL DESERT BOUNDARY CRITERIA
 dbAll = dbTest11*dbTest12*dbTest13*dbTest14*dbTest15*dbTest16
-#CHUCK OUT ANYTHING THAT FULFILLS ALL DESERT BOUNDARY CRITERIA
 
-#coastal false alarm rejection
+#COASTAL FALSE ALARM REJECTION
 with np.errstate(invalid='ignore'):
     ndvi = (allArrays['BAND2x1k']+allArrays['BAND1x1k'])/(allArrays['BAND2x1k']+allArrays['BAND1x1k'])
 unmaskedWater = np.zeros((nRows,nCols),dtype=np.int)
@@ -412,31 +397,25 @@ rejUnmaskedWater = np.zeros((nRows,nCols),dtype=np.int)
 with np.errstate(invalid='ignore'):
     rejUnmaskedWater[(absValTest == 0) & (Nuw>0)] = 1
 
-#COMBINE ALL MASKASKAKAKAKSSSSSSS
-allFires = dayFires+nightFires
-with np.errstate(invalid='ignore'):
+#COMBINE ALL MASKS
+allFires = dayFires+nightFires #ALL POTENTIAL FIRES
+with np.errstate(invalid='ignore'): #REJECT SUNGLINT, DESERT BOUNDARY, COASTAL FALSE ALARMS
     allFires[(sgAll == 1) | (dbAll == 1) | (rejUnmaskedWater == 1)] = 0
 
-#Currently yields 502938 fires, perhaps many outside of study area?
-##SHOULD YIELD ~176 FIRES FOR 2004178.2120          
-#OUTPUT DF
-
+###############
+#CALCULATE FRP
+###############
 b21firesAllMask = allFires*allArrays['BAND21']
 b21bgAllMask = allFires*b21meanFilt
 
 b21maskEXP = b21firesAllMask.astype(float)**8
 b21bgEXP = b21bgAllMask.astype(float)**8
 
-frpMW = 4.34 * (10**(-19)) * (b21maskEXP-b21bgEXP)#AREA TERM HERE
-
-frpMWabs = frpMW*potFire #APPLY ABSOLUTE TEMP THRESHOLD
-
-
+frpMW = 4.34 * (10**(-19)) * (b21maskEXP-b21bgEXP)
 
 ##################
 ##AREA CALCULATION
 ##################
-
 ##S = (I-hp)/H
 ##
 ##where:
@@ -465,16 +444,15 @@ Ps = Pt/np.cos(Z)
 
 areaKmSq = Pt * Ps
 
-frpMwKmSq = frpMWabs/areaKmSq
+frpMwKmSq = frpMW/areaKmSq
 
 with np.errstate(invalid='ignore'):
-    inds=np.where((frpMwKmSq>0)&(frpMwKmSq<1000))
+    inds=np.where((frpMwKmSq>0)&(frpMwKmSq<1000)) #>1000 FRP ARE NOISE
 FRPlats = allArrays['LAT'][inds]
 FRPlons =allArrays['LON'][inds]
 FrpInds = frpMwKmSq[inds]
 exportCSV = np.column_stack([FRPlons,FRPlats,FrpInds])
-##np.savetxt(filNam+'frp.csv', exportCSV, delimiter=",")
-##
+np.savetxt(filNam+'frp.csv', exportCSV, delimiter=",")
 
 
 
