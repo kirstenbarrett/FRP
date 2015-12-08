@@ -19,8 +19,8 @@ for b in bands:
     fullFilName = filNam + b + '.tif'
     ds = gdal.Open(fullFilName)
     data = np.array(ds.GetRasterBand(1).ReadAsArray())
-    data = data[1472:1546,566:656] #BOUNDARY FIRE AREA
-#    data = data[1105:2029,84:1065] #BOREAL AK AREA
+#    data = data[1472:1546,566:656] #BOUNDARY FIRE AREA
+    data = data[1105:2029,84:1065] #BOREAL AK AREA
     
     if b == 'BAND21' or b == 'BAND22' or b == 'BAND31' or b == 'BAND32':
 #        data = np.int_(np.rint(data))
@@ -79,13 +79,15 @@ minNfrac = 0.25
 minKsize = 5
 maxKsize = 21
 b21saturationVal = 450 #???
+reductionFactor= .99
+increaseFactor = 1+(1-reductionFactor)
 
 bgFlag = -3
 bgMask = np.zeros((nRows,nCols),dtype=np.int)
 
 with np.errstate(invalid='ignore'):
-    bgMask[np.where((dayFlag == 1) & (allArrays['BAND21'] >325) & (deltaT >20))] = bgFlag
-    bgMask[np.where((dayFlag == 0) & (deltaT >310)& (deltaT >10))] = bgFlag
+    bgMask[np.where((dayFlag == 1) & (allArrays['BAND21'] > (325*reductionFactor)) & (deltaT > (20*reductionFactor)))] = bgFlag
+    bgMask[np.where((dayFlag == 0) & (deltaT > (310*reductionFactor))& (deltaT >(10*reductionFactor)))] = bgFlag
 
     b21bgMask = np.copy(b21CloudWaterMasked)
     b21bgMask[np.where(bgMask == bgFlag)] = bgFlag
@@ -242,14 +244,14 @@ if (np.nanmax(b21CloudWaterMasked) > b21saturationVal):
 ####POTENTIAL FIRE TEST
 potFire = np.zeros((nRows,nCols),dtype=np.int)
 with np.errstate(invalid='ignore'):
-    potFire[(dayFlag == 1)&(allArrays['BAND21']>310)&(deltaT>10)&(allArrays['BAND2x1k']<300)] = 1
-    potFire[(dayFlag == 0)&(allArrays['BAND21']>305)&(deltaT>10)] = 1
+    potFire[(dayFlag == 1)&(allArrays['BAND21']>(310*reductionFactor))&(deltaT>(10*reductionFactor))&(allArrays['BAND2x1k']<(300*increaseFactor))] = 1
+    potFire[(dayFlag == 0)&(allArrays['BAND21']>(305*reductionFactor))&(deltaT>(10*reductionFactor))] = 1
 
 # ABSOLUTE THRESHOLD TEST (Kaufman et al. 1998) FOR REMOVING SUNGLINT
 absValTest = np.zeros((nRows,nCols),dtype=np.int)
 with np.errstate(invalid='ignore'):
-    absValTest[(dayFlag == 1) & (allArrays['BAND21']>360)] = 1
-    absValTest[(dayFlag == 0) & (allArrays['BAND21']>305)] = 1
+    absValTest[(dayFlag == 1) & (allArrays['BAND21']>(360*reductionFactor))] = 1
+    absValTest[(dayFlag == 0) & (allArrays['BAND21']>(305*reductionFactor))] = 1
 
 #########################################
 #CONTEXT TESTS (GIGLIO ET AL 2003)
@@ -467,14 +469,13 @@ areaKmSq = Pt * Ps
 
 frpMwKmSq = frpMWabs/areaKmSq
 
-with np.errstate(invalid='ignore'):
-    inds=np.where((frpMwKmSq>0)&(frpMwKmSq<1000))
-FRPlats = allArrays['LAT'][inds]
-FRPlons =allArrays['LON'][inds]
-FrpInds = frpMwKmSq[inds]
-exportCSV = np.column_stack([FRPlons,FRPlats,FrpInds])
-##np.savetxt(filNam+'frp.csv', exportCSV, delimiter=",")
-##
+FRPlats = allArrays['LAT'][allFires == 1]
+FRPlons =allArrays['LON'][allFires == 1]
+Area = areaKmSq[allFires == 1]
+FrpInds = frpMwKmSq[allFires == 1]
+exportCSV = np.column_stack([FRPlons,FRPlats,Area,FrpInds])
+np.savetxt(filNam+'frp_boreal_no_FRP_filt.csv', exportCSV, delimiter=",")
+
 
 
 
