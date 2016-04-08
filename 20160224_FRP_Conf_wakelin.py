@@ -5,7 +5,10 @@ import os
 from osgeo import gdal
 from pyproj import Proj, transform
 import datetime
-os.chdir('/media/ubuntu/TLINGIT/data/Remote_Sensing/MODIS/AK_MOD021KM_MOD03_2004_AMJJASO')
+from scipy.stats import gmean
+
+
+os.chdir('/media/ubuntu/TLINGIT/data/Remote_Sensing/MODIS/Giglio_test')
 filList = os.listdir('.')
 
 bands = ['BAND1','BAND2','BAND7','BAND21','BAND22','BAND31','BAND32','LANDMASK','SolarZenith','SolarAzimuth','SensorZenith','SensorAzimuth','LAT','LON']
@@ -30,7 +33,9 @@ cloudFlag = -2
 bgFlag = -3
 resolution = 5
 datsWdata = []
-datIter = 1 #START W SECOND OBSERVATION
+#datIter = 2388 #START JUNE 1 2004
+#datIter = 4396 #START AFTER MISSING DATA
+datIter = 0 #START AFTER MISSING DATA
 i = 0
 
 datList=[]
@@ -39,20 +44,31 @@ filNamList = []
 for fil in filList:
     if fil[-3:] == 'tif' and 'KM' in fil:
         filNam = fil[0:27]
-        if filNam not in filNamList:
+        csvNam = filNam + 'iterByDate_conf_wakelin.csv'
+        if (filNam not in filNamList) and (csvNam not in filList):
             filNamList.append(filNam)
-        datTim = fil.split('.')[1].replace('A','') + fil.split('.')[2]
-        dateTime = datetime.datetime.strptime(datTim, "%Y%j%H%M")
-        if dateTime not in datList:
-            datList.append(dateTime)
+            datTim = fil.split('.')[1].replace('A','') + fil.split('.')[2]
+            dateTime = datetime.datetime.strptime(datTim, "%Y%j%H%M")
+            if dateTime not in datList:
+                datList.append(dateTime)
 
 del filNam
 datList.sort()
 
-#frpArrays = np.zeros((len(datList),(nProjRows/resolution),nProjCols/resolution))
 #############################
 #ALL REQUIRED FUNCTION DEFS
 #############################
+def adjCloud(kernel):
+    nghbors = kernel[range(0,4)+range(5,9)]
+    cloudNghbors = kernel[np.where(nghbors == 1)]   
+    nCloudNghbr = len(cloudNghbors)
+    return nCloudNghbr
+
+def adjWater(kernel):
+    nghbors = kernel[range(0,4)+range(5,9)]
+    waterNghbors = kernel[np.where(nghbors == 1)]   
+    nWaterNghbr = len(waterNghbors)
+    return nWaterNghbr
 
 def makeFootprint(kSize):
     fpZeroLine = (kSize-1)/2
@@ -60,70 +76,90 @@ def makeFootprint(kSize):
     fpZeroColEnd = fpZeroColStart+3
     fp = np.ones((kSize,kSize),dtype = 'int_')
     fp[fpZeroLine,fpZeroColStart:fpZeroColEnd] = -5
-
     return fp
 
-def meanFilt(kernel,kSize,minKsize,maxKsize):
-    bgMean = -4
-    kernel = kernel.reshape((kSize,kSize))
+def rampFn(band,rampMin,rampMax):
+    conf = 0
+    confVals = []
+    for bandVal in band:
+        if rampMin < bandVal < rampMax:
+            conf = (bandVal-rampMin)/(rampMax-rampMin)
+        if bandVal >= rampMax: #I THINK THIS SHOULD BE GREATER THAN!!!
+            conf = 1
+        confVals.append(conf)
+    #masked values (-3) return conf of 0
+    return np.asarray(confVals)
+
+def wakelinFilter(band,maxKsize,minKsize):
     
-    centerVal = kernel[((kSize-1)/2),((kSize-1)/2)]
-    
-    if (((kSize == minKsize) | (centerVal == -4)) & (centerVal not in (range(-2,0)))):
-        fpMask = makeFootprint(kSize)
-        kernel[np.where(fpMask < 0)] = -5
-        nghbrs = kernel[np.where(kernel > 0)]
-        nghbrCnt = len(nghbrs)
-        
-        if ((nghbrCnt > minNcount) & (nghbrCnt > (minNfrac * ((kSize **2))))):
-             bgMean = np.mean(nghbrs)
-    return bgMean
+    # Add boundary for largest known tile size (maxKsize)
+    bSize = (maxKsize-1)/2 
+    bandMatrix = np.pad(band,((bSize,bSize),(bSize,bSize)),mode='symmetric')
 
+    bandFiltsMean2 = {}
+    bandFiltsMAD2 = {}
+    kSize = minKsize 
+    i,j = np.shape(band)
 
-def runFilt(band,filtFunc,minKsize,maxKsize):
-    filtBand = band
-    kSize = minKsize
-    bandFilts = {}
-
+    # Loop through dataset
     while kSize <=  maxKsize:
-        filtName = 'bandFilt'+str(kSize)
-        filtBand = ndimage.generic_filter(filtBand, filtFunc, size = kSize, extra_arguments= (kSize,minKsize,maxKsize))
-        bandFilts[filtName] = filtBand
+        
+        bandMADFilt2_tmp  = np.full([i,j], -4.0)
+        bandMeanFilt2_tmp = np.full([i,j], -4.0)
+        
+        halfK = (kSize-1)/2
+        for x in range(bSize,i+bSize):
+            for y in range(bSize,j+bSize):
+
+                xmhk = x-halfK
+                xphk = x+halfK+1
+                ymhk = y-halfK
+                yphk = y+halfK+1
+
+                # Must copy kernel otherwise it is a reference to original array - hence original is changed!
+                kernel = bandMatrix[xmhk:xphk:1,ymhk:yphk:1].copy()
+                centerVal = bandMatrix[x,y]
+
+
+                if (((kSize == minKsize) | (centerVal == -4)) & (centerVal not in (range(-2,0)))):
+                    fpMask = makeFootprint(kSize)
+                    kernel[np.where(fpMask < 0)] = -5
+                    nghbrs = kernel[np.where(kernel > 0)]
+                    nghbrCnt = len(nghbrs)
+                    
+                    if ((nghbrCnt > minNcount) & (nghbrCnt > (minNfrac * ((kSize **2))))):
+                        bgMean = np.mean(nghbrs)
+                        meanDists = np.abs(nghbrs - bgMean)
+                        bgMAD = np.mean(meanDists)
+
+                        # Remember - Results matrix is smaller than padded dataset by bSize in all directions
+                        xmb = x-bSize
+                        ymb = y-bSize
+                        bandMADFilt2_tmp[xmb,ymb] = bgMAD
+                        bandMeanFilt2_tmp[xmb,ymb] = bgMean
+
+                        
+        filtNameMean2 = 'bandFiltMean'+str(kSize)
+        bandFiltsMean2[filtNameMean2] = bandMeanFilt2_tmp
+        filtNameMAD2 = 'bandFiltMAD'+str(kSize)
+        bandFiltsMAD2[filtNameMAD2] = bandMADFilt2_tmp
+
         kSize += 2
 
-    bandFilt = bandFilts['bandFilt'+str(minKsize)]
+
+
+    bandFiltMean2 = bandFiltsMean2['bandFiltMean'+str(minKsize)]
+    bandFiltMAD2 = bandFiltsMAD2['bandFiltMAD'+str(minKsize)]
     kSize = minKsize + 2
 
     while kSize <= maxKsize:
-        bandFilt[np.where(bandFilt == -4)] = bandFilts['bandFilt'+str(kSize)][np.where(bandFilt == -4)]
+        bandFiltMean2[np.where(bandFiltMean2 == -4)] = bandFiltsMean2['bandFiltMean'+str(kSize)][np.where(bandFiltMean2 == -4)]
+        bandFiltMAD2[np.where(bandFiltMAD2 == -4)] = bandFiltsMAD2['bandFiltMAD'+str(kSize)][np.where(bandFiltMAD2 == -4)]
         kSize += 2
-        
-    return bandFilt
 
-def zoomImgNE(array,resolution):
-    
-    #CALCULATE THE OFFSET TO MAKE IMAGE DIMENSIONS EASILY DIVISIBLE BY 5
-    [rows,cols] = array.shape
-    colsOffset = cols - (cols/resolution*resolution)
-    rowsOffset = rows - (rows/resolution*resolution)
-    
-    #TRIM ARRAY
-    if colsOffset > 0:
-        array = array[rowsOffset:rows, 0:(colsOffset*-1)]
-    else:
-        array = array[rowsOffset:rows, 0:cols]
-    
-    #NEW RESOLUTION OF ZOOMED IMAGE
-    newShape = (rows/resolution,cols/resolution)
-    sh = newShape[0],array.shape[0]//newShape[0],newShape[1],array.shape[1]//newShape[1]
-    
-    ##CREATE COARSER RESOLUTION ARRAY BY SUMMING CELL VALUES
-    arrayZoom = array.reshape(sh).sum(-1).sum(1)
-    
-    return(arrayZoom)
+    return bandFiltMean2,bandFiltMAD2
 
-
-############################################################
+##########################################################
 
 while datIter < len(datList):
     t = datList[datIter]
@@ -151,8 +187,9 @@ while datIter < len(datList):
         fullFilName = filNam + b + '.tif'
         ds = gdal.Open(fullFilName)
         data = np.array(ds.GetRasterBand(1).ReadAsArray())
+        data = data[400:600,400:600] #BOUNDARY y2004 d180 21h 10m
  #       data = data[1472:1546,566:656] #BOUNDARY FIRE AREA
-        data = data[1105:2029,84:1065] #BOREAL AK AREA
+ #       data = data[1105:2029,84:1065] #BOREAL AK AREA
         
         if b == 'BAND21' or b == 'BAND22' or b == 'BAND31' or b == 'BAND32':
     #        data = np.int_(np.rint(data))
@@ -200,8 +237,7 @@ while datIter < len(datList):
     ##########################
     ##AFTER ALL THE DATA HAVE BEEN READ IN
     ##########################
-
-    
+   
     bgMask = np.zeros((nRows,nCols),dtype=np.int)
 
     with np.errstate(invalid='ignore'):
@@ -220,23 +256,21 @@ while datIter < len(datList):
         deltaTbgMask = np.copy(deltaTCloudWaterMasked)
         deltaTbgMask[np.where(bgMask == bgFlag)] = bgFlag
 
-    ############################
-    ####B21 MEAN FILTER
-    ############################
+    ####################################################################################
+    ####B21 MEAN AND MAD FILTER (MAD NEEDED FOR CONFIDENCE ESTIMATION)
+    ####################################################################################
 
-    b21meanFilt = runFilt(b21bgMask,meanFilt,minKsize,maxKsize) 
-    b21minusBG = np.copy(b21CloudWaterMasked) - np.copy(b21meanFilt)
+        b21meanFilt,b21MADfilt = wakelinFilter(b21bgMask,maxKsize,minKsize)
+        b21minusBG = np.copy(b21CloudWaterMasked) - np.copy(b21meanFilt)
 
-    ##TEST FOR SATURATION IN BAND 21
-    if (np.nanmax(b21CloudWaterMasked) > b21saturationVal):
+        if (np.nanmax(b21CloudWaterMasked) > b21saturationVal):
+            b22meanFilt,b22MADfilt = wakelinFilter(b22bgMask,maxKsize,minKsize)
+            b22minusBG = np.copy(b22CloudWaterMasked) - np.copy(b22meanFilt)
 
-        b22meanFilt = runFilt(b22bgMask,meanFilt,minKsize,maxKsize)
-        b22minusBG = np.copy(b22CloudWaterMasked)  - np.copy(b22meanFilt)
-
-        with np.errstate(invalid='ignore'):
-            b21minusBG[(b21CloudWaterMasked >= b21saturationVal)] = b22minusBG[(b21CloudWaterMasked >= b21saturationVal)]
-
-    ####POTENTIAL FIRE TEST
+            with np.errstate(invalid='ignore'):
+                b21minusBG[(b21CloudWaterMasked >= b21saturationVal)] = b22minusBG[(b21CloudWaterMasked >= b21saturationVal)]
+            
+   ####POTENTIAL FIRE TEST
     potFire = np.zeros((nRows,nCols),dtype=np.int)
     with np.errstate(invalid='ignore'):
         potFire[(dayFlag == 1)&(allArrays['BAND21']>(310*reductionFactor))&(deltaT>(10*reductionFactor))&(allArrays['BAND2x1k']<(300*increaseFactor))] = 1
@@ -280,6 +314,56 @@ while datIter < len(datList):
         frpMW = 4.34 * (10**(-19)) * (b21maskEXP-b21bgEXP) #AREA TERM HERE
 
         frpMWabs = frpMW*potFire #APPLY ABSOLUTE TEMP THRESHOLD
+        
+        #########################
+        #DETECTION CONFIDENCE
+        #########################
+        cloudLoc = np.zeros((nRows,nCols),dtype=np.int)
+        with np.errstate(invalid='ignore'):
+            cloudLoc[np.where(cloudMask == cloudFlag)] = 1
+        nCloudAdj = ndimage.generic_filter(cloudLoc, adjCloud, size = 3)
+
+        waterLoc = np.zeros((nRows,nCols),dtype=np.int)
+        with np.errstate(invalid='ignore'):
+            waterLoc[np.where(waterMask == waterFlag)] = 1
+        nWaterAdj = ndimage.generic_filter(waterLoc, adjWater, size = 3)
+        
+        deltaTmeanFilt,deltaTMADFilt = wakelinFilter(deltaTbgMask,maxKsize,minKsize)
+
+        #Fire Detection Confidence 17
+        z4 = b21minusBG/b21MADfilt
+
+        #Fire Detection Confidence 18
+        zDeltaT = (deltaTbgMask-deltaTmeanFilt)/deltaTMADFilt
+
+        with np.errstate(invalid='ignore'):
+            firesNclouds = nCloudAdj[(allFires == 1) & (0 < frpMWabs) & (frpMWabs < 3900)]
+            firesZ4 = z4[(allFires == 1) & (0 < frpMWabs) & (frpMWabs < 3900)]
+            firesZdeltaT = zDeltaT[(allFires == 1) & (0 < frpMWabs) & (frpMWabs < 3900)]
+            firesB21bgMask = b21bgMask[(allFires == 1) & (0 < frpMWabs) & (frpMWabs < 3900)]
+            firesNwater = nWaterAdj[(allFires == 1) & (0 < frpMWabs) & (frpMWabs < 3900)]
+
+        #Fire Detection Confidence 19 (SHOULD BE DIFFERENT IN NIGHT AND DAY)
+        C1 = rampFn(firesB21bgMask, 310, 340)
+
+        #Fire Detection Confidence 20
+        C2 = rampFn(firesZ4, 2.5, 6)
+
+        #Fire Detection Confidence 21
+        C3 = rampFn(firesZdeltaT, 3, 6)
+
+        #Fire Detection Confidence 22
+        C4 = 1-rampFn(firesNclouds, 0, 6)
+        ##ZERO CLOUDS = ZERO CONFIDENCE????
+
+        #Fire Detection Confidence 23
+        C5 = 1-rampFn(firesNwater, 0, 6)
+
+        confArray = np.row_stack((C1,C2,C3,C4,C5))
+        detnConf = gmean(confArray, axis = 0)
+
+        ##############################################
+        
 
         ##################
         ##AREA CALCULATION
@@ -333,62 +417,7 @@ while datIter < len(datList):
         js = np.array(np.repeat(int(julianDay),len(FRP)))
         yrs = np.array(np.repeat(int(yr),len(FRP)))
                 
-        exportCSV = np.column_stack([FRPx,FRPy,FRPxProj,FRPyProj,Area,FRP,FrpArea,hrs,mints,js,yrs])
-        np.savetxt(filNam+'iterByDate_XY.csv', exportCSV, delimiter=",")
-
+        exportCSV = np.column_stack([FRPlons,FRPlats,FRPxProj,FRPyProj,Area,FRP,FrpArea,hrs,mints,js,yrs,detnConf])
+ #       np.savetxt(filNam+'iterByDate_conf_wakelin.csv', exportCSV, delimiter=",")
 
     datIter += 1
-
-##ADD HEADER TO FILES
-filList = os.listdir('.')
-hdr = 'X,Y,AEA_AK_X,AEA_AK_Y,Area,FRP,FrpArea,hr,min,julian,year\n'
-for filnam in filList:
-    if filnam[-11:] == 'datTime.csv':
-        newfilnam = filnam.replace('.csv','_hdr.csv')
-        newfil = open(newfilnam,'w')
-        newfil.write(hdr)
-        fil = open(filnam,'r')
-        content = fil.read()
-        newfil.write(content)
-        newfil.close()
-     
-###
-#FRE JUNK    
-##
-####ONLY INCLUDE DATES FOR WHICH ACTIVE FIRES WERE OBSERVED
-##datWdataIter = 1
-##
-##while datWdataIter < len(datsWdata):
-##    time0 = datsWdata[datWdataIter]
-##    tMin1 = datsWdata[datWdataIter-1]
-##    timeDelta = time0 - tMin1
-##    timeDmin = (abs(timeDelta.days)*24*60) + (timeDelta.seconds/60)
-##    timeDsec = timeDmin*60
-##    if 'timeSinceLast' in locals():
-##        timeSinceLast = np.vstack((timeSinceLast, timeDsec))
-##    else:
-##        timeSinceLast = timeDsec
-##    datWdataIter += 1
-##
-##
-##bigArrayTrapz = np.trapz(bigArray, dx = timeSinceLast, axis = 0)
-##bigArrayTrapz = bigArrayTrapz.astype(int)
-##
-###RESHAPE TO 2 DIMENSIONAL ARRAY
-##bigArrayTrapz = np.reshape(bigArrayTrapz, (zoomRows, zoomCols))
-
-###WRITE YEARLY FRE TO A NEW TIF FILE
-##outfile = "FRE_" + str(yr) + "ii.tif"
-##outdriver = gdal.GetDriverByName("GTiff")
-##outdata = outdriver.Create(str(outfile), zoomCols, zoomRows, 1, gdal.GDT_Int16)
-##
-##outdata.GetRasterBand(1).WriteArray(bigArrayTrapz,0,0)
-##outdata.SetGeoTransform(trans)
-##outdata.SetProjection(proj)
-
-
-
-
-
-
-
