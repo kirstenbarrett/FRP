@@ -8,7 +8,7 @@ import datetime
 from scipy.stats import gmean
 
 
-os.chdir('/Users/kirsten/Documents/data/MODIS/MOD021KM_frp_input_tifs')
+#os.chdir('/smb/kb308_uol.le.ac.uk_root/staff/home/k/kb308/Research/FRP/FRPi')
 filList = os.listdir('.')
 
 bands = ['BAND1','BAND2','BAND7','BAND21','BAND22','BAND31','BAND32','LANDMASK','SolarZenith','SolarAzimuth','SensorZenith','SensorAzimuth','LAT','LON']
@@ -38,7 +38,7 @@ minNcount = 8
 minNfrac = 0.25
 minKsize = 5
 maxKsize = 21
-b22saturationVal = 331 #???
+b22saturationVal = 331 
 reductionFactor= 1
 increaseFactor = 1+(1-reductionFactor)
 waterFlag = -1
@@ -46,7 +46,7 @@ cloudFlag = -2
 bgFlag = -3
 resolution = 5
 datsWdata = []
-datIter = 0 #15 gives weird error related to B22saturationVal
+datIter = 0 
 
 datList=[]
 filNamList = []
@@ -588,45 +588,45 @@ while datIter < len(datList):
 
         #DESERT BOUNDARY REJECTION
 
-##        nValid = runFilt(b22bgMask,nValidFilt,minKsize,maxKsize)
-##        nRejectedBG = runFilt(bgMask,nRejectBGfireFilt,minKsize,maxKsize)
-##
-##        with np.errstate(invalid='ignore'):
-##            nRejectedBG[np.where(nRejectedBG<0)] = 0
-##
-##        #DESERT BOUNDARY TEST 11
-##        dbTest11 = np.zeros((nRows,nCols),dtype=np.int)
-##        with np.errstate(invalid='ignore'):
-##            dbTest11[np.where(nRejectedBG>(0.1*nValid))] = 1
-##
-##        #DB TEST 12
-##        dbTest12 = np.zeros((nRows,nCols),dtype=np.int)
-##        with np.errstate(invalid='ignore'):
-##            dbTest12[(nRejectedBG>=4)] = 1
-##
-##        #DB TEST 13
-##        dbTest13 = np.zeros((nRows,nCols),dtype=np.int)
-##        with np.errstate(invalid='ignore'):
-##            dbTest13[np.where(allArrays['BAND2x1k']>150)] = 1
-##
-##        #DB TEST 14
-##        dbTest14 = np.zeros((nRows,nCols),dtype=np.int)
-##        with np.errstate(invalid='ignore'):
-##            dbTest14[(b22rejMeanFilt<345)] = 1
-##
-##        #DB TEST 15
-##        dbTest15 = np.zeros((nRows,nCols),dtype=np.int)
-##        with np.errstate(invalid='ignore'):
-##            dbTest15[(b22rejMADfilt<3)] = 1
-##
-##        #DB TEST 16
-##        dbTest16 = np.zeros((nRows,nCols),dtype=np.int)
-##        with np.errstate(invalid='ignore'):
-##            dbTest16[(b22CloudWaterMasked<(b22rejMeanFilt+(6*b22rejMADfilt)))] = 1
-##
-##        #REJECT ANYTHING THAT FULFILLS ALL DESERT BOUNDARY CRITERIA
-##        dbAll = dbTest11*dbTest12*dbTest13*dbTest14*dbTest15*dbTest16
-##        dbPlus = dbTest11+dbTest12+dbTest13+dbTest14+dbTest15+dbTest16
+        nValid = runFilt(b22bgMask,nValidFilt,minKsize,maxKsize)
+        nRejectedBG = runFilt(bgMask,nRejectBGfireFilt,minKsize,maxKsize)
+
+        with np.errstate(invalid='ignore'):
+            nRejectedBG[np.where(nRejectedBG<0)] = 0
+
+        #DESERT BOUNDARY TEST 11
+        dbTest11 = np.zeros((nRows,nCols),dtype=np.int)
+        with np.errstate(invalid='ignore'):
+            dbTest11[np.where(nRejectedBG>(0.1*nValid))] = 1
+
+        #DB TEST 12
+        dbTest12 = np.zeros((nRows,nCols),dtype=np.int)
+        with np.errstate(invalid='ignore'):
+            dbTest12[(nRejectedBG>=4)] = 1
+
+        #DB TEST 13
+        dbTest13 = np.zeros((nRows,nCols),dtype=np.int)
+        with np.errstate(invalid='ignore'):
+            dbTest13[np.where(allArrays['BAND2x1k']>150)] = 1
+
+        #DB TEST 14
+        dbTest14 = np.zeros((nRows,nCols),dtype=np.int)
+        with np.errstate(invalid='ignore'):
+            dbTest14[(b22rejMeanFilt<345)] = 1
+
+        #DB TEST 15
+        dbTest15 = np.zeros((nRows,nCols),dtype=np.int)
+        with np.errstate(invalid='ignore'):
+            dbTest15[(b22rejMADfilt<3)] = 1
+
+        #DB TEST 16
+        dbTest16 = np.zeros((nRows,nCols),dtype=np.int)
+        with np.errstate(invalid='ignore'):
+            dbTest16[(b22CloudWaterMasked<(b22rejMeanFilt+(6*b22rejMADfilt)))] = 1
+
+        #REJECT ANYTHING THAT FULFILLS ALL DESERT BOUNDARY CRITERIA
+        dbAll = dbTest11*dbTest12*dbTest13*dbTest14*dbTest15*dbTest16
+        dbPlus = dbTest11+dbTest12+dbTest13+dbTest14+dbTest15+dbTest16
 
         #COASTAL FALSE ALARM REJECTION
         with np.errstate(invalid='ignore'):
@@ -644,8 +644,8 @@ while datIter < len(datList):
         #COMBINE ALL MASKS
         allFires = dayFires+nightFires #ALL POTENTIAL FIRES
         with np.errstate(invalid='ignore'): #REJECT SUNGLINT, DESERT BOUNDARY, COASTAL FALSE ALARMS
- #           allFires[(sgAll == 1) | (dbAll == 1) | (rejUnmaskedWater == 1)] = 0
-            allFires[(sgAll == 1) | (rejUnmaskedWater == 1)] = 0
+            allFires[(sgAll == 1) | (dbAll == 1) | (rejUnmaskedWater == 1)] = 0
+
 
 
         if np.max(allFires) > 0:
@@ -745,23 +745,30 @@ while datIter < len(datList):
 
             with np.errstate(invalid='ignore'):
                 FRPx = np.where((allFires == 1) & (0 < frpMWabs) & (frpMWabs < 3900))[1]
+                FRPsample = FRPx+min1
                 FRPy = np.where((allFires == 1) & (0 < frpMWabs) & (frpMWabs < 3900))[0]
+                FRPline = FRPy+min0
                 FRPlats = allArrays['LAT'][(allFires == 1) & (0 < frpMWabs) & (frpMWabs < 3900)]
-                FRPlons =allArrays['LON'][(allFires == 1) & (0 < frpMWabs) & (frpMWabs < 3900)]
+                FRPlons = allArrays['LON'][(allFires == 1) & (0 < frpMWabs) & (frpMWabs < 3900)]
+                FRPT21 = allArrays['BAND22'][(allFires == 1) & (0 < frpMWabs) & (frpMWabs < 3900)]
+                FRPT31 = allArrays['BAND31'][(allFires == 1) & (0 < frpMWabs) & (frpMWabs < 3900)]
+                FRPMeanT21 = b22meanFilt[(allFires == 1) & (0 < frpMWabs) & (frpMWabs < 3900)]
+                FRPMeanT31 = b31meanFilt[(allFires == 1) & (0 < frpMWabs) & (frpMWabs < 3900)]
+                FRPMeanDT = deltaTmeanFilt[(allFires == 1) & (0 < frpMWabs) & (frpMWabs < 3900)]
+                FRPMADT21 = b22MADfilt[(allFires == 1) & (0 < frpMWabs) & (frpMWabs < 3900)]
+                FRPMADT31 = b31MADfilt[(allFires == 1) & (0 < frpMWabs) & (frpMWabs < 3900)]
+                FRP_MAD_DT = deltaTMADFilt[(allFires == 1) & (0 < frpMWabs) & (frpMWabs < 3900)]
+                FRP_AdjCloud = nCloudAdj[(allFires == 1) & (0 < frpMWabs) & (frpMWabs < 3900)]
+                FRP_AdjWater = nWaterAdj[(allFires == 1) & (0 < frpMWabs) & (frpMWabs < 3900)]
+#                FRP_WinSize = 
+                FRP_NumValid = nValid[(allFires == 1) & (0 < frpMWabs) & (frpMWabs < 3900)]
+                FRP_confidence = detnConf*100
                 Area = areaKmSq[(allFires == 1) & (0 < frpMWabs) & (frpMWabs < 3900)]
-                FRP = frpMWabs[(allFires == 1) & (0 < frpMWabs) & (frpMWabs < 3900)]
-                FrpArea = frpMwKmSq[(allFires == 1) & (0 < frpMWabs) & (frpMWabs < 3900)]
-        
-            inProj = Proj(init='epsg:4326') #GEOGRAPHIC WGS84
-            outProj = Proj(init='esri:102006') #AK ALBERS EQUAL AREA CONIC
-
-            FRPxProj,FRPyProj = transform(inProj,outProj,FRPlons,FRPlats)
-            hrs = np.array(np.repeat(int(hr),len(FRP)))
-            mints = np.array(np.repeat(int(mint),len(FRP)))
-            js = np.array(np.repeat(int(julianDay),len(FRP)))
-            yrs = np.array(np.repeat(int(yr),len(FRP)))
-                    
-            exportCSV = np.column_stack([FRPx,FRPy,FRPxProj,FRPyProj,FRPlats,FRPlons,Area,FRP,FrpArea,hrs,mints,js,yrs,detnConf])
-            np.savetxt(filNam+'frp20160418_noDb.csv', exportCSV, delimiter=",")
+                FRPpower = frpMWabs[(allFires == 1) & (0 < frpMWabs) & (frpMWabs < 3900)]
+ #               FRParea = frpMwKmSq[(allFires == 1) & (0 < frpMWabs) & (frpMWabs < 3900)]
+            
+            exportCSV = np.column_stack([FRPline, FRPsample, FRPlats, FRPlons, FRPT21, FRPT31, FRPMeanT21, FRPMeanT31, FRPMeanDT, FRPMADT21, FRPMADT31, FRP_MAD_DT, FRPpower, FRP_AdjCloud, FRP_AdjWater, FRP_NumValid, FRP_confidence])
+            hdr = '"FRPline","FRPsample","FRPlats","FRPlons","FRPT21","FRPT31","FRPMeanT21","FRPMeanT31","FRPMeanDT","FRPMADT21","FRPMADT31","FRP_MAD_DT","FRPpower","FRP_AdjCloud","FRP_AdjWater","FRP_NumValid","FRP_confidence"'
+            np.savetxt(filNam+'frp20160509_boundary.csv', exportCSV, delimiter=",", header = hdr)
 
     datIter += 1
