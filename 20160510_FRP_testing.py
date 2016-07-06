@@ -1,10 +1,18 @@
 #!/usr/bin/python
 from scipy import ndimage
+from scipy.stats import gmean
+from osgeo import gdal
 import numpy as np
 import os
-from osgeo import gdal
 import datetime
-from scipy.stats import gmean
+import argparse
+
+# Argument parser
+parser = argparse.ArgumentParser()
+parser.add_argument("-rF", "--reductionFactor", help="set the reduction factor", type=float)
+args = parser.parse_args()
+
+
 
 # os.chdir('/smb/kb308_uol.le.ac.uk_root/staff/home/k/kb308/Research/FRP/FRPi')
 filList = os.listdir('.')
@@ -39,7 +47,12 @@ minNfrac = 0.25
 minKsize = 5
 maxKsize = 21
 b22saturationVal = 331
-reductionFactor = 1
+
+if (args.reductionFactor):
+  reductionFactor = args.reductionFactor
+else:
+  reductionFactor = 1
+
 increaseFactor = 1 + (1 - reductionFactor)
 waterFlag = -1
 cloudFlag = -2
