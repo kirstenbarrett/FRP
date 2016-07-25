@@ -17,60 +17,63 @@ import StringIO
 parser = argparse.ArgumentParser()
 
 # The order id argument
-parser.add_argument("ID", help="the data order id", type=str)
+parser.add_argument("-o", "--order", help="the data order id", type=str)
 
 # Parse the command line arguments
 args = parser.parse_args()
 
-# Build the ftp host with the order id
-host = 'ftp://ladsweb.nascom.nasa.gov/orders/' + args.ID + '/'
+# Order ID was supplied let's download the order HDFs
+if args.order:
 
-# Initiate curl
-c = pycurl.Curl()
-c.setopt(pycurl.URL, host)
+  # Build the ftp host with the order id
+  host = 'ftp://ladsweb.nascom.nasa.gov/orders/' + args.order + '/'
 
-# String output buffer for curl return
-output = StringIO.StringIO()
-c.setopt(pycurl.WRITEFUNCTION, output.write)
+  # Initiate curl
+  c = pycurl.Curl()
+  c.setopt(pycurl.URL, host)
 
-# Execute curl and get the order from the output buffer
-c.perform()
-order = output.getvalue().split()
+  # String output buffer for curl return
+  output = StringIO.StringIO()
+  c.setopt(pycurl.WRITEFUNCTION, output.write)
 
-# Create URLs for all HDFs defined within the order
-hdfs = []
-for info in order:
-  if ".hdf" not in info:
-    continue
-  hdfs.append(info)
+  # Execute curl and get the order from the output buffer
+  c.perform()
+  order = output.getvalue().split()
 
-m = pycurl.CurlMulti()
+  # Create URLs for all HDFs defined within the order
+  hdfs = []
+  for info in order:
+    if ".hdf" not in info:
+      continue
+    hdfs.append(info)
 
-for hdf in hdfs:
+  m = pycurl.CurlMulti()
 
-  fp = open(os.path.join('.', hdf), "wb")
-  curl = pycurl.Curl()
-  curl.setopt(pycurl.URL, host + hdf)
-  curl.setopt(pycurl.NOPROGRESS, 0)
-  curl.setopt(pycurl.FOLLOWLOCATION, 1)
-  curl.setopt(pycurl.MAXREDIRS, 5)
-  curl.setopt(pycurl.CONNECTTIMEOUT, 50)
-  curl.setopt(pycurl.FTP_RESPONSE_TIMEOUT, 600)
-  curl.setopt(pycurl.NOSIGNAL, 1)
-  curl.setopt(pycurl.WRITEDATA, fp)
-  m.add_handle(curl)
+  for hdf in hdfs:
 
-num_handles = 1
+    fp = open(os.path.join('.', hdf), "wb")
+    curl = pycurl.Curl()
+    curl.setopt(pycurl.URL, host + hdf)
+    curl.setopt(pycurl.NOPROGRESS, 0)
+    curl.setopt(pycurl.FOLLOWLOCATION, 1)
+    curl.setopt(pycurl.MAXREDIRS, 5)
+    curl.setopt(pycurl.CONNECTTIMEOUT, 50)
+    curl.setopt(pycurl.FTP_RESPONSE_TIMEOUT, 600)
+    curl.setopt(pycurl.NOSIGNAL, 1)
+    curl.setopt(pycurl.WRITEDATA, fp)
+    m.add_handle(curl)
 
-# Keep going until all the connections have terminated
-while num_handles:
-    # The select method uses fdset internally to determine which file descriptors
-    # to check.
-    m.select(1.0)
-    while 1:
-        ret, num_handles = m.perform()
-        if ret != pycurl.E_CALL_MULTI_PERFORM:
-            break
+  num_handles = 1
+
+  # Keep going until all the connections have terminated
+  while num_handles:
+      # The select method uses fdset internally to determine which file descriptors
+      # to check.
+      m.select(1.0)
+      while 1:
+          ret, num_handles = m.perform()
+          if ret != pycurl.E_CALL_MULTI_PERFORM:
+              break
 
 filList = os.listdir('.')
 
