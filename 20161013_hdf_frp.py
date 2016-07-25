@@ -9,7 +9,6 @@ import datetime
 from scipy.stats import gmean
 import math
 import argparse
-import sys
 import pycurl
 import StringIO
 
@@ -18,6 +17,9 @@ parser = argparse.ArgumentParser()
 
 # The order id argument
 parser.add_argument("-o", "--order", help="the data order id", type=str)
+
+# Verbosity
+parser.add_argument("-v", "--verbose", help="turn on verbose output", action="store_true")
 
 # Parse the command line arguments
 args = parser.parse_args()
@@ -40,40 +42,29 @@ if args.order:
   c.perform()
   order = output.getvalue().split()
 
-  # Create URLs for all HDFs defined within the order
-  hdfs = []
+  # Download all HDFs in the order info
   for info in order:
+
     if ".hdf" not in info:
       continue
-    hdfs.append(info)
 
-  m = pycurl.CurlMulti()
+    if (args.verbose):
+      print "Attempting download of " + info
 
-  for hdf in hdfs:
-
-    fp = open(os.path.join('.', hdf), "wb")
+    fp = open(os.path.join('.', info), "wb")
     curl = pycurl.Curl()
-    curl.setopt(pycurl.URL, host + hdf)
-    curl.setopt(pycurl.NOPROGRESS, 0)
-    curl.setopt(pycurl.FOLLOWLOCATION, 1)
-    curl.setopt(pycurl.MAXREDIRS, 5)
-    curl.setopt(pycurl.CONNECTTIMEOUT, 50)
-    curl.setopt(pycurl.FTP_RESPONSE_TIMEOUT, 600)
-    curl.setopt(pycurl.NOSIGNAL, 1)
+    curl.setopt(pycurl.URL, host + info)
     curl.setopt(pycurl.WRITEDATA, fp)
-    m.add_handle(curl)
 
-  num_handles = 1
+    if (args.verbose):
+      curl.setopt(pycurl.NOPROGRESS, 0)
 
-  # Keep going until all the connections have terminated
-  while num_handles:
-      # The select method uses fdset internally to determine which file descriptors
-      # to check.
-      m.select(1.0)
-      while 1:
-          ret, num_handles = m.perform()
-          if ret != pycurl.E_CALL_MULTI_PERFORM:
-              break
+    curl.perform()
+    curl.close()
+    fp.close()
+
+    if (args.verbose):
+      print "Successfully downloaded " + info
 
 filList = os.listdir('.')
 
