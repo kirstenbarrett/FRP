@@ -11,6 +11,7 @@ import math
 import argparse
 import pycurl
 import StringIO
+import os.path
 
 # Argument parser, run with -h for more info
 parser = argparse.ArgumentParser()
@@ -51,6 +52,11 @@ if args.order:
     if ".hdf" not in info:
       continue
 
+    # The HDF already exists skip the download
+    if (os.path.exists(info) and args.verbose):
+      print "Skipping download of " + info
+      continue
+
     if (args.verbose):
       print "Attempting download of " + info
 
@@ -58,10 +64,6 @@ if args.order:
     curl = pycurl.Curl()
     curl.setopt(pycurl.URL, host + info)
     curl.setopt(pycurl.WRITEDATA, fp)
-
-    if (args.verbose):
-      curl.setopt(pycurl.NOPROGRESS, 0)
-
     curl.perform()
     curl.close()
     fp.close()
