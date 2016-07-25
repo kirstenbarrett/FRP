@@ -14,7 +14,7 @@ This is a python project which helps in the detection of wild fires.
 
 3) Install python dependencies;
 
-    **osgeo** using the terminal command `brew install gdal`.
+    **osgeo** using the terminal command `brew install gdal --with-complete --with-unsupported --with-hdf4`.
 
     **scipy** using the terminal command `pip install scipy`.
 
