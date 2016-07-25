@@ -18,7 +18,7 @@ parser = argparse.ArgumentParser()
 # The order id argument
 parser.add_argument("-o", "--order", help="the data order id", type=str)
 
-# Verbosity
+# Verbosity output
 parser.add_argument("-v", "--verbose", help="turn on verbose output", action="store_true")
 
 # Parse the command line arguments
@@ -26,6 +26,9 @@ args = parser.parse_args()
 
 # Order ID was supplied let's download the order HDFs
 if args.order:
+
+  if (args.verbose):
+    print "Connecting to order " + args.order
 
   # Build the ftp host with the order id
   host = 'ftp://ladsweb.nascom.nasa.gov/orders/' + args.order + '/'
