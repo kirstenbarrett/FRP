@@ -1,4 +1,6 @@
 #!/usr/bin/python
+import threading
+
 from scipy import ndimage
 import numpy as np
 import os
@@ -6,6 +8,68 @@ from osgeo import gdal
 import datetime
 from scipy.stats import gmean
 import math
+import argparse
+import pycurl
+import StringIO
+import os.path
+
+# Argument parser, run with -h for more info
+parser = argparse.ArgumentParser()
+
+# The order id argument
+parser.add_argument("-o", "--order", help="the data order id", type=str)
+
+# Verbosity output
+parser.add_argument("-v", "--verbose", help="turn on verbose output", action="store_true")
+
+# Parse the command line arguments
+args = parser.parse_args()
+
+# Order ID was supplied let's download the order HDFs
+if args.order:
+
+  if (args.verbose):
+    print "Connecting to order " + args.order
+
+  # Build the ftp host with the order id
+  host = 'ftp://ladsweb.nascom.nasa.gov/orders/' + args.order + '/'
+
+  # Initiate curl
+  c = pycurl.Curl()
+  c.setopt(pycurl.URL, host)
+
+  # String output buffer for curl return
+  output = StringIO.StringIO()
+  c.setopt(pycurl.WRITEFUNCTION, output.write)
+
+  # Execute curl and get the order from the output buffer
+  c.perform()
+  order = output.getvalue().split()
+
+  # Download all HDFs in the order info
+  for info in order:
+
+    if ".hdf" not in info:
+      continue
+
+    # The HDF already exists skip the download
+    if (os.path.exists(info) and args.verbose):
+      print "Skipping download of " + info
+      continue
+
+    if (args.verbose):
+      print "Attempting download of " + info
+
+    fp = open(os.path.join('.', info), "wb")
+    curl = pycurl.Curl()
+    curl.setopt(pycurl.URL, host + info)
+    curl.setopt(pycurl.WRITEDATA, fp)
+    curl.perform()
+    curl.close()
+    fp.close()
+
+    if (args.verbose):
+      print "Successfully downloaded " + info
 
 filList = os.listdir('.')
 
