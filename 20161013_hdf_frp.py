@@ -1,5 +1,4 @@
 #!/usr/bin/python
-import time
 from scipy import ndimage
 import numpy as np
 from osgeo import gdal
@@ -7,11 +6,7 @@ import datetime
 from scipy.stats import gmean
 import math
 import argparse
-import pycurl
-import StringIO
 import os.path
-
-start = time.clock()
 
 # Argument parser, run with -h for more info
 parser = argparse.ArgumentParser()
@@ -22,72 +17,8 @@ parser.add_argument("-maxLat", "--maximumLatitude", help="the maximum latitude (
 parser.add_argument("-minLon", "--minimumLongitude", help="the minimum longitude (-148 by default)", default=-148, type=float)
 parser.add_argument("-maxLon", "--maximumLongitude", help="the maximum longitude (-146 by default)", default=-146, type=float)
 
-# The order id argument
-parser.add_argument("-o", "--order", help="the data order id", type=str)
-
-# Max download count for HDFs
-parser.add_argument("-dl", "--downloadLimit", help="limit the amount of HDF files to download", default=0, type=int)
-
-# Verbosity output
-parser.add_argument("-v", "--verbose", help="turn on verbose output", action="store_true")
-
 # Parse the command line arguments
 args = parser.parse_args()
-
-# Order ID was supplied let's download the order HDFs
-if args.order:
-
-  if (args.verbose):
-    print "Connecting to order " + args.order
-
-  # Build the ftp host with the order id
-  host = 'ftp://ladsweb.nascom.nasa.gov/orders/' + args.order + '/'
-
-  # Initiate curl
-  c = pycurl.Curl()
-  c.setopt(pycurl.URL, host)
-
-  # String output buffer for curl return
-  output = StringIO.StringIO()
-  c.setopt(pycurl.WRITEFUNCTION, output.write)
-
-  # Execute curl and get the order from the output buffer
-  c.perform()
-  order = output.getvalue().split()
-
-  dlCount = 0
-
-  # Download all HDFs in the order info
-  for info in order:
-
-    if ".hdf" not in info:
-      continue
-
-    # The HDF already exists skip the download
-    if (os.path.exists(info) and args.verbose):
-      print "Skipping download of " + info
-      continue
-
-    if (args.verbose):
-      print "Attempting download of " + info
-
-    fp = open(os.path.join('.', info), "wb")
-    curl = pycurl.Curl()
-    curl.setopt(pycurl.URL, host + info)
-    curl.setopt(pycurl.WRITEDATA, fp)
-    curl.perform()
-    curl.close()
-    fp.close()
-
-    if (args.verbose):
-      print "Successfully downloaded " + info
-
-    dlCount += 1
-
-    if args.downloadLimit == dlCount:
-      if args.verbose:
-        print "HDF download limit reached"
-      break
 
 filList = os.listdir('.')
 
@@ -476,10 +407,6 @@ while datIter < len(datList):
 
     file_template = 'HDF4_EOS:EOS_SWATH:%s:MODIS_SWATH_Type_L1B:%s'
     this_file = file_template % (filMOD02, layer)
-
-    if args.verbose:
-      print "Reading HDF file layer " + this_file
-
     g = gdal.Open(this_file)
     if g is None:
       raise IOError
@@ -983,8 +910,3 @@ while datIter < len(datList):
       np.savetxt(filMOD02.replace('hdf', '') + 'frp20160512_hdf_hps.csv', exportCSV, delimiter=",", header=hdr)
 
   datIter += 1
-
-end = time.clock()
-
-if args.verbose:
-  print "Runtime = {} seconds".format(end - start)

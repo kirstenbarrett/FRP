@@ -1,6 +1,6 @@
-# Wild Fire Detection
+## FTP Download of HDFs
 
-This is a python project which helps in the detection of wild fires.
+To programatically download HDFs via FTP use `hdf_ftp.py` program. For usage instructions use option `-h` on the command line.
 
 ## How to setup
 
@@ -26,4 +26,6 @@ This is a python project which helps in the detection of wild fires.
 ### Mac
 
 In order to run the project ensure that you use the homebrew version of python which can be found at `/usr/local/Cellar/python/2.7.11/bin/python`, _(assuming you did not change the default install directory)_.
+
+
 
