@@ -10,7 +10,8 @@ To programatically download HDFs via FTP use `hdf_ftp.py` program. For usage ins
 
 2) Install **python** using the terminal command `brew install python`. _Ensure python is version 2.7.11 (the highest stable build)_.
 
-    This will also install **pip** which is needed to install the required python dependencies. Ensure it is fully updated using the terminal command `pip install --upgrade pip`.
+    This will also install **pip** which is needed to install the required python dependencies. 
+    Ensure it is fully updated using the terminal command `pip install --upgrade pip`.
 
 3) Install python dependencies;
 
