@@ -1,4 +1,5 @@
 #!/usr/bin/python
+import time
 from scipy import ndimage
 import numpy as np
 from osgeo import gdal
@@ -9,6 +10,8 @@ import argparse
 import pycurl
 import StringIO
 import os.path
+
+start = time.clock()
 
 # Argument parser, run with -h for more info
 parser = argparse.ArgumentParser()
@@ -980,3 +983,8 @@ while datIter < len(datList):
       np.savetxt(filMOD02.replace('hdf', '') + 'frp20160512_hdf_hps.csv', exportCSV, delimiter=",", header=hdr)
 
   datIter += 1
+
+end = time.clock()
+
+if args.verbose:
+  print "Runtime = {} seconds".format(end - start)
