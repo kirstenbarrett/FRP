@@ -1,4 +1,5 @@
 #!/bin/bash
+
 #PBS -N FRP
 #PBS -l walltime=00:10:00
 #PBS -q devel
@@ -9,5 +10,5 @@ module load python/2.7.9
 module load gdal
 
 cd $PBS_O_WORKDIR
-#./master.py $PBS_ARRAYID $NUMJOBS
+#./master.py $PBS_ARRAYID 16
 ./process.py data
