@@ -16,6 +16,12 @@ start = time.clock()
 # Argument parser, run with -h for more info
 parser = argparse.ArgumentParser()
 
+# Minimum/Maximum longitude/latitude command line arguments
+parser.add_argument("-minLat", "--minimumLatitude", help="the minimum latitude (65 by default)", default=65, type=float)
+parser.add_argument("-maxLat", "--maximumLatitude", help="the maximum latitude (65.525 by default)", default=65.525, type=float)
+parser.add_argument("-minLon", "--minimumLongitude", help="the minimum longitude (-148 by default)", default=-148, type=float)
+parser.add_argument("-maxLon", "--maximumLongitude", help="the maximum longitude (-146 by default)", default=-146, type=float)
+
 # The order id argument
 parser.add_argument("-o", "--order", help="the data order id", type=str)
 
@@ -85,23 +91,17 @@ if args.order:
 
 filList = os.listdir('.')
 
+# BOUNDARY LATLONS
+minLat = args.minimumLatitude
+maxLat = args.maximumLatitude
+minLon = args.minimumLongitude
+maxLon = args.maximumLongitude
+
 # AK BOREAL EXTENT
 minX = -511738.931
 minY = 1176158.734
 maxX = 672884.463
 maxY = 2117721.949
-
-# # BOREAL LATLONS
-# minLat = 62
-# maxLat = 68.6
-# minLon = -162
-# maxLon = -140
-
-# BOUNDARY LATLONS
-minLat = 65
-maxLat = 65.525
-minLon = -148
-maxLon = -146
 
 nProjRows = np.int_(np.rint((maxY - minY) / 1000))
 nProjCols = np.int_(np.rint((maxX - minX) / 1000))
