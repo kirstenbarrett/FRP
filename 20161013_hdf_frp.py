@@ -1,4 +1,5 @@
 #!/usr/bin/python
+
 from scipy import ndimage
 import numpy as np
 from osgeo import gdal
