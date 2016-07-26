@@ -63,8 +63,10 @@ datList.sort()
 
 ######################
 # FUNCTION DEFINITIONS
+######################
 
 # TODO - Use cdef instead to stop dynamically assigning types
+# TODO - Replace wakelinMeanMADFilter with meanMADFilter
 
 def adjCloud(kernel):
 
