@@ -1,9 +1,6 @@
 #!/usr/bin/python
-import threading
-
 from scipy import ndimage
 import numpy as np
-import os
 from osgeo import gdal
 import datetime
 from scipy.stats import gmean
@@ -18,6 +15,9 @@ parser = argparse.ArgumentParser()
 
 # The order id argument
 parser.add_argument("-o", "--order", help="the data order id", type=str)
+
+# Max download count for HDFs
+parser.add_argument("-dl", "--downloadLimit", help="limit the amount of HDF files to download", default=0, type=int)
 
 # Verbosity output
 parser.add_argument("-v", "--verbose", help="turn on verbose output", action="store_true")
@@ -46,6 +46,8 @@ if args.order:
   c.perform()
   order = output.getvalue().split()
 
+  dlCount = 0
+
   # Download all HDFs in the order info
   for info in order:
 
@@ -70,6 +72,13 @@ if args.order:
 
     if (args.verbose):
       print "Successfully downloaded " + info
+
+    dlCount += 1
+
+    if args.downloadLimit == dlCount:
+      if args.verbose:
+        print "HDF download limit reached"
+      break
 
 filList = os.listdir('.')
 
@@ -433,10 +442,13 @@ def wakelinMADFilter(band, maxKsize, minKsize):
 ##########################################################
 
 while datIter < len(datList):
+
   t = datList[datIter]
+
   ########################################################################################
   # GET REQUIRED INFORMATION FROM HDF FILES
   ########################################################################################
+  
   julianDay = str(t.timetuple().tm_yday)
   jZeros = 3 - len(julianDay)
   julianDay = '0' * jZeros + julianDay
@@ -450,9 +462,9 @@ while datIter < len(datList):
   datNam = yr + julianDay + '.' + hr + mint
 
   for filNamCandidate in filNamList:
-    if datNam in filNamCandidate and filNamCandidate[0:5] == 'MYD03':
+    if datNam in filNamCandidate and filNamCandidate[0:5] == 'MOD03':
       filMOD03 = filNamCandidate
-    if datNam in filNamCandidate and filNamCandidate[0:5] == 'MYD02':
+    if datNam in filNamCandidate and filNamCandidate[0:5] == 'MOD02':
       filMOD02 = filNamCandidate
 
   fullArrays = {}
@@ -461,7 +473,10 @@ while datIter < len(datList):
 
     file_template = 'HDF4_EOS:EOS_SWATH:%s:MODIS_SWATH_Type_L1B:%s'
     this_file = file_template % (filMOD02, layer)
-    print(this_file)
+
+    if args.verbose:
+      print "Reading HDF file layer " + this_file
+
     g = gdal.Open(this_file)
     if g is None:
       raise IOError
