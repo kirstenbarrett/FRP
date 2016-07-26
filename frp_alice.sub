@@ -1,0 +1,15 @@
+#!/bin/bash
+#PBS -N FRP
+#PBS -l walltime=00:10:00
+#PBS -q devel
+##PBS -l nodes=1:ppn=16
+#PBS -l pvmem=4gb
+#PBS -t 1-16
+NUMJOBS=16
+
+module load python/2.7.9
+module load gdal
+
+cd $PBS_O_WORKDIR
+#./master.py $PBS_ARRAYID $NUMJOBS
+./process.py data
