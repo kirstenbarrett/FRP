@@ -2,19 +2,33 @@
 
 To programatically download HDFs via FTP use `hdf_ftp.py` program. For usage instructions use option `-h` on the command line.
 
-### Running on OSX
+## Use on ALICE
 
-Install **command line tools** `xcode-select –install`
+Log into ALICE (remember to use the -X option on ssh) and load the following modules
 
-Install **homebrew** `ruby -e “$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/master/install)”`
+    module load python/2.7.9
+    module load gdal
+    module load R
+    
+Make the code
 
-Install **python** `brew install python`
+    make
 
-Upgrade **pip** `pip install --upgrade pip`
+Then submit a job
 
-Install **osgeo** `brew install gdal --with-complete --with-unsupported --with-hdf4`
+    qsub frp_alice.sub
 
-Install **scipy** `pip install scipy`
+Once this has finished, run the post processing script 
 
-Install **numpy** `pip install numpy`
+    R
+    source("postproc.r")
 
+# Serial profiling
+
+Ensure that you have Cython, GDAL, numpy and scipy available. Type 
+
+    make
+
+and then 
+
+    ./doprof.py
