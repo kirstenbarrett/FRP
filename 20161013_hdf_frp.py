@@ -33,6 +33,7 @@ minY = 1176158.734
 maxX = 672884.463
 maxY = 2117721.949
 
+# Constants
 nProjRows = np.int_(np.rint((maxY - minY) / 1000))
 nProjCols = np.int_(np.rint((maxX - minX) / 1000))
 minNcount = 8
@@ -47,7 +48,6 @@ cloudFlag = -2
 bgFlag = -3
 resolution = 5
 datsWdata = []
-datIter = 0
 
 # Coefficients for radiance calculations
 coeff1 = 119104200
@@ -59,6 +59,9 @@ lambda32 = 12.02
 # Layers for reading in HDF files
 layersMOD02 = ['EV_1KM_Emissive', 'EV_250_Aggr1km_RefSB', 'EV_500_Aggr1km_RefSB']
 layersMOD03 = ['Land/SeaMask', 'Latitude', 'Longitude', 'SolarAzimuth', 'SolarZenith', 'SensorAzimuth', 'SensorZenith']
+
+# HDF file list
+filList = [file for file in os.listdir('.') if ".hdf" in file]
 
 def adjCloud(kernel):
   nghbors = kernel[range(0, 4) + range(5, 9)]
@@ -335,19 +338,12 @@ def wakelinMADFilter(band, maxKsize, minKsize):
 
   return bandFiltMAD2
 
+def process(file):
 
-filList = [file for file in os.listdir('.') if ".hdf" in file]
-
-for fil in filList:
-
-  filSplt = fil.split('.')
+  filSplt = file.split('.')
   datTim = filSplt[1].replace('A', '') + filSplt[2]
   t = datetime.datetime.strptime(datTim, "%Y%j%H%M")
 
-  ########################################################################################
-  # GET REQUIRED INFORMATION FROM HDF FILES
-  ########################################################################################
-  
   julianDay = str(t.timetuple().tm_yday)
   jZeros = 3 - len(julianDay)
   julianDay = '0' * jZeros + julianDay
@@ -492,9 +488,9 @@ for fil in filList:
 
   # CLIP AREA TO BOUNDING COORDINATES
   boundCrds = np.where((minLat < fullArrays['LAT']) & (fullArrays['LAT'] < maxLat) & (fullArrays['LON'] < maxLon) & (
-  minLon < fullArrays['LON']))
+    minLon < fullArrays['LON']))
   if np.size(boundCrds) > 0 and (np.min(boundCrds[0]) != np.max(boundCrds[0])) and (
-    np.min(boundCrds[1]) != np.max(boundCrds[1])):
+        np.min(boundCrds[1]) != np.max(boundCrds[1])):
     boundCrds0 = boundCrds[0]
     boundCrds1 = boundCrds[1]
     min0 = np.min(boundCrds[0])
@@ -586,7 +582,7 @@ for fil in filList:
     potFire = np.zeros((nRows, nCols), dtype=np.int)
     with np.errstate(invalid='ignore'):
       potFire[(dayFlag == 1) & (allArrays['BAND22'] > (310 * reductionFactor)) & (deltaT > (10 * reductionFactor)) & (
-      allArrays['BAND2x1k'] < (300 * increaseFactor))] = 1
+        allArrays['BAND2x1k'] < (300 * increaseFactor))] = 1
       potFire[(dayFlag == 0) & (allArrays['BAND22'] > (305 * reductionFactor)) & (deltaT > (10 * reductionFactor))] = 1
 
     # ABSOLUTE THRESHOLD TEST (Kaufman et al. 1998) FOR REMOVING SUNGLINT
@@ -648,7 +644,7 @@ for fil in filList:
     # SUNGLINT REJECTION
     relAzimuth = allArrays['SensorAzimuth'] - allArrays['SolarAzimuth']
     cosThetaG = (np.cos(allArrays['SensorZenith']) * np.cos(allArrays['SolarZenith'])) - (
-    np.sin(allArrays['SensorZenith']) * np.sin(allArrays['SolarZenith']) * np.cos(relAzimuth))
+      np.sin(allArrays['SensorZenith']) * np.sin(allArrays['SolarZenith']) * np.cos(relAzimuth))
     thetaG = np.arccos(cosThetaG)
     thetaG = (thetaG / 3.141592) * 180
 
@@ -661,7 +657,7 @@ for fil in filList:
     sgTest9 = np.zeros((nRows, nCols), dtype=np.int)
     with np.errstate(invalid='ignore'):
       sgTest9[np.where((thetaG < 8) & (allArrays['BAND1x1k'] > 100) & (allArrays['BAND2x1k'] > 200) & (
-      allArrays['BAND7x1k'] > 120))] = 1
+        allArrays['BAND7x1k'] > 120))] = 1
 
     # SUNGLINT TEST 10
     waterLoc = np.zeros((nRows, nCols), dtype=np.int)
@@ -874,4 +870,4 @@ for fil in filList:
       hdr = '"FRPline","FRPsample","FRPlats","FRPlons","FRPT21","FRPT31","FRPMeanT21","FRPMeanT31","FRPMeanDT","FRPMADT21","FRPMADT31","FRP_MAD_DT","FRPpower","FRP_AdjCloud","FRP_AdjWater","FRP_NumValid","FRP_confidence"'
       np.savetxt(filMOD02.replace('hdf', '') + 'frp20160512_hdf_hps.csv', exportCSV, delimiter=",", header=hdr)
 
-  datIter += 1
+map(process, filList)
