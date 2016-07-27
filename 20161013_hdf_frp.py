@@ -60,8 +60,9 @@ lambda32 = 12.02
 layersMOD02 = ['EV_1KM_Emissive', 'EV_250_Aggr1km_RefSB', 'EV_500_Aggr1km_RefSB']
 layersMOD03 = ['Land/SeaMask', 'Latitude', 'Longitude', 'SolarAzimuth', 'SolarZenith', 'SensorAzimuth', 'SensorZenith']
 
-# HDF file list
-filList = [file for file in os.listdir('.') if ".hdf" in file]
+# HDFs
+HDF03 = [file for file in os.listdir('.') if ".hdf" in file and "D03" in file]
+HDF02 = [file for file in os.listdir('.') if ".hdf" in file and "D02" in file]
 
 def adjCloud(kernel):
   nghbors = kernel[range(0, 4) + range(5, 9)]
@@ -338,9 +339,9 @@ def wakelinMADFilter(band, maxKsize, minKsize):
 
   return bandFiltMAD2
 
-def process(file):
+def process(filMOD02):
 
-  filSplt = file.split('.')
+  filSplt = filMOD02.split('.')
   datTim = filSplt[1].replace('A', '') + filSplt[2]
   t = datetime.datetime.strptime(datTim, "%Y%j%H%M")
 
@@ -356,14 +357,10 @@ def process(file):
   mint = '0' * mintZeros + mint
   datNam = yr + julianDay + '.' + hr + mint
 
-  print filList
-  for filNamCandidate in filList:
-
-    print datNam, filNamCandidate
-    if datNam in filNamCandidate and filNamCandidate[3:5] == '03':
+  for filNamCandidate in HDF03:
+    if datNam in filNamCandidate:
       filMOD03 = filNamCandidate
-    if datNam in filNamCandidate and filNamCandidate[3:5] == '02':
-      filMOD02 = filNamCandidate
+      break
 
   fullArrays = {}
 
@@ -873,4 +870,4 @@ def process(file):
       hdr = '"FRPline","FRPsample","FRPlats","FRPlons","FRPT21","FRPT31","FRPMeanT21","FRPMeanT31","FRPMeanDT","FRPMADT21","FRPMADT31","FRP_MAD_DT","FRPpower","FRP_AdjCloud","FRP_AdjWater","FRP_NumValid","FRP_confidence"'
       np.savetxt(filMOD02.replace('hdf', '') + 'frp20160512_hdf_hps.csv', exportCSV, delimiter=",", header=hdr)
 
-map(process, filList)
+map(process, HDF02)
