@@ -21,8 +21,6 @@ parser.add_argument("-maxLon", "--maximumLongitude", help="the maximum longitude
 # Parse the command line arguments
 args = parser.parse_args()
 
-filList = [file for file in os.listdir('.') if ".hdf" in file]
-
 # BOUNDARY LATLONS
 minLat = args.minimumLatitude
 maxLat = args.maximumLatitude
@@ -58,31 +56,9 @@ lambda21and22 = 3.959
 lambda31 = 11.009
 lambda32 = 12.02
 
-datList = []
-filNamList = []
-
 # Layers for reading in HDF files
 layersMOD02 = ['EV_1KM_Emissive', 'EV_250_Aggr1km_RefSB', 'EV_500_Aggr1km_RefSB']
 layersMOD03 = ['Land/SeaMask', 'Latitude', 'Longitude', 'SolarAzimuth', 'SolarZenith', 'SensorAzimuth', 'SensorZenith']
-
-for fil in filList:
-  filSplt = fil.split('.')
-  if filSplt[len(filSplt) - 1] == 'hdf':
-    if fil not in filNamList and int(filSplt[1][5:8]) >= 150:
-      filNamList.append(fil)
-      datTim = filSplt[1].replace('A', '') + filSplt[2]
-      dateTime = datetime.datetime.strptime(datTim, "%Y%j%H%M")
-      if dateTime not in datList:
-        datList.append(dateTime)
-
-
-
-del fil
-datList.sort()
-
-#############################
-# ALL REQUIRED FUNCTION DEFS
-#############################
 
 def adjCloud(kernel):
   nghbors = kernel[range(0, 4) + range(5, 9)]
@@ -90,13 +66,11 @@ def adjCloud(kernel):
   nCloudNghbr = len(cloudNghbors)
   return nCloudNghbr
 
-
 def adjWater(kernel):
   nghbors = kernel[range(0, 4) + range(5, 9)]
   waterNghbors = kernel[np.where(nghbors == 1)]
   nWaterNghbr = len(waterNghbors)
   return nWaterNghbr
-
 
 def makeFootprint(kSize):
   fpZeroLine = (kSize - 1) / 2
@@ -106,8 +80,6 @@ def makeFootprint(kSize):
   fp[fpZeroLine, fpZeroColStart:fpZeroColEnd] = -5
   return fp
 
-
-# RETURN NUMBER OF NON-BACKGROUND FIRE, NON-CLOUD, NON-WATER NEIGHBORS
 def nValidFilt(kernel, kSize, minKsize, maxKsize):  # USE BG mask files
   nghbrCnt = -4
   kernel = kernel.reshape((kSize, kSize))
@@ -123,8 +95,6 @@ def nValidFilt(kernel, kSize, minKsize, maxKsize):  # USE BG mask files
 
   return nghbrCnt
 
-
-# RETURN NUMBER OF NEIGHBORS REJECTED AS BACKGROUND
 def nRejectBGfireFilt(kernel, kSize, minKsize, maxKsize):
   nRejectBGfire = -4
   kernel = kernel.reshape((kSize, kSize))
@@ -135,8 +105,6 @@ def nRejectBGfireFilt(kernel, kSize, minKsize, maxKsize):
 
   return nRejectBGfire
 
-
-# RETURN NUMBER OF NEIGHBORS REJECTED AS WATER
 def nRejectWaterFilt(kernel, kSize, minKsize, maxKsize):
   nRejectWater = -4
   kernel = kernel.reshape((kSize, kSize))
@@ -148,8 +116,6 @@ def nRejectWaterFilt(kernel, kSize, minKsize, maxKsize):
 
   return nRejectWater
 
-
-# RETURN NUMBER OF 'UNMASKED WATER' NEIGHBORS
 def nUnmaskedWaterFilt(kernel, kSize, minKsize, maxKsize):
   nUnmaskedWater = -4
   kernel = kernel.reshape((kSize, kSize))
@@ -160,7 +126,6 @@ def nUnmaskedWaterFilt(kernel, kSize, minKsize, maxKsize):
     nUnmaskedWater = len(kernel[np.where(kernel == -6)])
 
   return nUnmaskedWater
-
 
 def rampFn(band, rampMin, rampMax):
   conf = 0
@@ -174,8 +139,6 @@ def rampFn(band, rampMin, rampMax):
   # masked values (-3) return conf of 0
   return np.asarray(confVals)
 
-
-# RUNS FILTERS ON PROGRESSIVELY LARGER KERNEL SIZES, COMBINES RESULTS FROM SMALLEST KSIZE
 def runFilt(band, filtFunc, minKsize, maxKsize):
   filtBand = band
   kSize = minKsize
@@ -195,7 +158,6 @@ def runFilt(band, filtFunc, minKsize, maxKsize):
     kSize += 2
 
   return bandFilt
-
 
 def wakelinMeanMADFilter(band, maxKsize, minKsize):
   # Add boundary for largest known tile size (maxKsize)
@@ -262,7 +224,6 @@ def wakelinMeanMADFilter(band, maxKsize, minKsize):
 
   return bandFiltMean2, bandFiltMAD2
 
-
 def wakelinMeanFilter(band, maxKsize, minKsize):
   # Add boundary for largest known tile size (maxKsize)
   bSize = (maxKsize - 1) / 2
@@ -316,7 +277,6 @@ def wakelinMeanFilter(band, maxKsize, minKsize):
     kSize += 2
 
   return bandFiltMean2
-
 
 def wakelinMADFilter(band, maxKsize, minKsize):
   # Add boundary for largest known tile size (maxKsize)
@@ -376,11 +336,13 @@ def wakelinMADFilter(band, maxKsize, minKsize):
   return bandFiltMAD2
 
 
-##########################################################
+filList = [file for file in os.listdir('.') if ".hdf" in file]
 
-while datIter < len(datList):
+for fil in filList:
 
-  t = datList[datIter]
+  filSplt = fil.split('.')
+  datTim = filSplt[1].replace('A', '') + filSplt[2]
+  t = datetime.datetime.strptime(datTim, "%Y%j%H%M")
 
   ########################################################################################
   # GET REQUIRED INFORMATION FROM HDF FILES
@@ -398,7 +360,7 @@ while datIter < len(datList):
   mint = '0' * mintZeros + mint
   datNam = yr + julianDay + '.' + hr + mint
 
-  for filNamCandidate in filNamList:
+  for filNamCandidate in filList:
     if datNam in filNamCandidate and filNamCandidate[0:5] == 'MOD03':
       filMOD03 = filNamCandidate
     if datNam in filNamCandidate and filNamCandidate[0:5] == 'MOD02':
@@ -779,7 +741,7 @@ while datIter < len(datList):
       allFires[(sgAll == 1) | (dbAll == 1) | (rejUnmaskedWater == 1)] = 0
 
     if np.max(allFires) > 0:
-      datsWdata.append(datList[datIter])
+      datsWdata.append(t)
 
       b22firesAllMask = allFires * allArrays['BAND22']
       b22bgAllMask = allFires * b22meanFilt
