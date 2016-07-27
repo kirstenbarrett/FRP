@@ -713,7 +713,6 @@ def run(datapath, procid, minLat, maxLat, minLon, maxLon):
         sgAll[(sgTest8 == 1) | (sgTest9 == 1) | (sgTest10 == 1)] = 1
 
       # DESERT BOUNDARY REJECTION
-
       nValid = runFilt(b22bgMask, nValidFilt, minKsize, maxKsize)
       nRejectedBG = runFilt(bgMask, nRejectBGfireFilt, minKsize, maxKsize)
 
