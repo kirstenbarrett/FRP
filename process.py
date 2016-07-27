@@ -5,13 +5,9 @@ import re
 import cyfrp
 
 target = sys.argv[1]
-coords = open(target+"/coords.txt", "r")
+coords = open(target + "/coords.txt", "r")
 line = coords.readline()
 data = re.findall("[0-9.]+", line)
-ay = data[0]
-by = data[1]
-ax = data[2]
-bx = data[3]
 coords.close()
 
-cyfrp.run(target, 0, ay, by, ax, bx)
+cyfrp.run(target, 0, data[0], data[1], data[2], data[3])
