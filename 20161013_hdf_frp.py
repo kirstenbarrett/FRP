@@ -1,4 +1,5 @@
 #!/usr/bin/python
+
 from scipy import ndimage
 import numpy as np
 from osgeo import gdal
@@ -20,7 +21,7 @@ parser.add_argument("-maxLon", "--maximumLongitude", help="the maximum longitude
 # Parse the command line arguments
 args = parser.parse_args()
 
-filList = os.listdir('.')
+filList = [file for file in os.listdir('.') if ".hdf" in file]
 
 # BOUNDARY LATLONS
 minLat = args.minimumLatitude
@@ -73,6 +74,8 @@ for fil in filList:
       dateTime = datetime.datetime.strptime(datTim, "%Y%j%H%M")
       if dateTime not in datList:
         datList.append(dateTime)
+
+
 
 del fil
 datList.sort()
