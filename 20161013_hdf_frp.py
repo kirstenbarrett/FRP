@@ -356,10 +356,13 @@ def process(file):
   mint = '0' * mintZeros + mint
   datNam = yr + julianDay + '.' + hr + mint
 
+  print filList
   for filNamCandidate in filList:
-    if datNam in filNamCandidate and filNamCandidate[0:5] == 'MOD03':
+
+    print datNam, filNamCandidate
+    if datNam in filNamCandidate and filNamCandidate[3:5] == '03':
       filMOD03 = filNamCandidate
-    if datNam in filNamCandidate and filNamCandidate[0:5] == 'MOD02':
+    if datNam in filNamCandidate and filNamCandidate[3:5] == '02':
       filMOD02 = filNamCandidate
 
   fullArrays = {}
