@@ -19,7 +19,7 @@ parser.add_argument("-v", "--verbose", help="turn on verbose output", action="st
 # Parse the command line arguments
 args = parser.parse_args()
 
-if (args.verbose):
+if args.verbose:
   print "Connecting to order " + args.ORDER
 
 # Build the ftp host with the order id
@@ -46,11 +46,11 @@ for info in order:
     continue
 
   # The HDF already exists skip the download
-  if (os.path.exists(info) and args.verbose):
+  if os.path.exists(info) and args.verbose:
     print "Skipping download of " + info
     continue
 
-  if (args.verbose):
+  if args.verbose:
     print "Attempting download of " + info
 
   fp = open(os.path.join('.', info), "wb")
@@ -61,7 +61,7 @@ for info in order:
   curl.close()
   fp.close()
 
-  if (args.verbose):
+  if args.verbose:
     print "Successfully downloaded " + info
 
   dlCount += 1
