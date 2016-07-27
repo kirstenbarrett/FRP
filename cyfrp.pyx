@@ -7,7 +7,7 @@ from osgeo import gdal
 import datetime
 from scipy.stats import gmean
 import math
-cimport numpy as np
+# cimport numpy as np
 
 filList = os.listdir('.')
 
