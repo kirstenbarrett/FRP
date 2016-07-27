@@ -84,7 +84,7 @@ def makeFootprint(kSize):
   fp[fpZeroLine, fpZeroColStart:fpZeroColEnd] = -5
   return fp
 
-def nValidFilt(kernel, kSize, minKsize):  # Use background mask files
+def nValidFilt(kernel, kSize, minKsize, maxKsize):  # Use background mask files
   nghbrCnt = -4
   kernel = kernel.reshape((kSize, kSize))
 
@@ -98,7 +98,7 @@ def nValidFilt(kernel, kSize, minKsize):  # Use background mask files
 
   return nghbrCnt
 
-def nRejectBGfireFilt(kernel, kSize, minKsize):
+def nRejectBGfireFilt(kernel, kSize, minKsize, maxKsize):
   nRejectBGfire = -4
   kernel = kernel.reshape((kSize, kSize))
   centerVal = kernel[((kSize - 1) / 2), ((kSize - 1) / 2)]
@@ -108,7 +108,7 @@ def nRejectBGfireFilt(kernel, kSize, minKsize):
 
   return nRejectBGfire
 
-def nRejectWaterFilt(kernel, kSize, minKsize):
+def nRejectWaterFilt(kernel, kSize, minKsize, maxKsize):
   nRejectWater = -4
   kernel = kernel.reshape((kSize, kSize))
 
@@ -119,7 +119,7 @@ def nRejectWaterFilt(kernel, kSize, minKsize):
 
   return nRejectWater
 
-def nUnmaskedWaterFilt(kernel, kSize, minKsize):
+def nUnmaskedWaterFilt(kernel, kSize, minKsize, maxKsize):
   nUnmaskedWater = -4
   kernel = kernel.reshape((kSize, kSize))
 
