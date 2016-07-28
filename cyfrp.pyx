@@ -9,15 +9,6 @@ from scipy.stats import gmean
 import math
 cimport numpy as np
 
-# Boreal extent
-minX = -511738.931
-minY = 1176158.734
-maxX = 672884.463
-maxY = 2117721.949
-
-# Constants
-nProjRows = np.int_(np.rint((maxY - minY) / 1000))
-nProjCols = np.int_(np.rint((maxX - minX) / 1000))
 minNcount = 8
 minNfrac = 0.25
 minKsize = 5
@@ -790,3 +781,5 @@ def process(filMOD02, minLat, maxLat, minLon, maxLon):
 def run(datapath, procid, minLat, maxLat, minLon, maxLon):
 
   [process(hdf, minLat, maxLat, minLon, maxLon) for hdf in HDF02]
+
+# run('.', 0, 65, 65.525, -148, -146)
