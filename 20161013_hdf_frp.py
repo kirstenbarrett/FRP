@@ -38,6 +38,14 @@ DEF_MAX_KER = 21
 MIN_MAX_KER = 0
 MAX_MAX_KER = 100
 
+DEF_WIN_OBV = 8
+MIN_WIN_OBV = 1
+MAX_WIN_OBV = 20
+
+DEF_VLD_FRC = 0.25
+MIN_VLD_FRC = 0.1
+MAX_VLD_FRC = 1
+
 # Argument parser, run with -h for more info
 parser = argparse.ArgumentParser()
 
@@ -79,6 +87,16 @@ parser.add_argument(
   "-maxK", "--maximumKernel",
   help="the maximum kernel size default:" + str(DEF_MAX_KER) + " min:" + str(MIN_MAX_KER) + " max:" + str(MAX_MAX_KER),
   default=DEF_MAX_KER, type=int)
+
+parser.add_argument(
+  "-winObv", "--windowObservations",
+  help="the amount of window observations default:" + str(DEF_WIN_OBV) + " min:" + str(MIN_WIN_OBV) + " max:" + str(MAX_WIN_OBV),
+  default=DEF_WIN_OBV, type=int)
+
+parser.add_argument(
+  "-vldFrc", "--validFraction",
+  help="valid fraction of valid observations default:" + str(DEF_VLD_FRC) + " min:" + str(MIN_VLD_FRC) + " max:" + str(MAX_VLD_FRC),
+  default=DEF_VLD_FRC, type=float)
 
 # Parse the command line arguments
 args = parser.parse_args()
@@ -153,6 +171,26 @@ if args.maximumKernel > MAX_MAX_KER:
     print "Lowering maximum kernel size to upper bound", MAX_MAX_KER
 maxKsize = args.maximumKernel
 
+if args.windowObservations < MIN_WIN_OBV:
+  args.windowObservations = MIN_WIN_OBV
+  if args.verbose:
+    print "Raising window observation count to lower bound", MIN_WIN_OBV
+elif args.windowObservations > MAX_WIN_OBV:
+  args.windowObservations = MAX_WIN_OBV
+  if args.verbose:
+    print "Lowering window observation count to upper bound", MAX_WIN_OBV
+minNcount = args.windowObservations
+
+if args.validFraction < MIN_VLD_FRC:
+  args.validFraction = MIN_VLD_FRC
+  if args.verbose:
+    print "Raising valid fraction of observations to lower bound", MIN_VLD_FRC
+elif args.validFraction > MAX_VLD_FRC:
+  args.validFraction = MAX_VLD_FRC
+  if args.verbose:
+    print "Lowering valid fraction of observations to upper bound", MAX_VLD_FRC
+minNfrac = args.validFraction
+
 # Verbose output configured settings
 if args.verbose:
   print "Minimum latitude set to", minLat
@@ -162,9 +200,9 @@ if args.verbose:
   print "Reduction factor set to", reductionFactor
   print "Minimum kernel size set to", minKsize
   print "Maximum kernel size set to", maxKsize
+  print "Window observation count set to", minNcount
+  print "Valid fraction of observations set to", minNfrac
 
-minNcount = 8
-minNfrac = 0.25
 b22saturationVal = 331
 increaseFactor = 1 + (1 - reductionFactor)
 waterFlag = -1
