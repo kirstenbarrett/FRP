@@ -9,17 +9,32 @@ import math
 import argparse
 import os.path
 
+# Constants
+DEF_MAX_LAT = 65
+DEF_MIN_LAT = 65.525
+DEF_MAX_LON = -146
+DEF_MIN_LON = -148
+
+DEF_RED_FAC = 1
+MIN_RED_FAC = 0
+MAX_RED_FAC = 10
+
 # Argument parser, run with -h for more info
 parser = argparse.ArgumentParser()
 
 # Command line arguments
-parser.add_argument("-minLat", "--minimumLatitude", help="the minimum latitude (65 by default)", default=65, type=float)
-parser.add_argument("-maxLat", "--maximumLatitude", help="the maximum latitude (65.525 by default)", default=65.525, type=float)
-parser.add_argument("-minLon", "--minimumLongitude", help="the minimum longitude (-148 by default)", default=-148, type=float)
-parser.add_argument("-maxLon", "--maximumLongitude", help="the maximum longitude (-146 by default)", default=-146, type=float)
-parser.add_argument("-v", "--verbose", help="turn on verbose output", action="store_true")
-# TODO add these in ALICE version
-parser.add_argument("-rf", "--reductionFactor", help="the reduction factor (1 by default) min=0 max=10", default=1, type=float)
+parser.add_argument("-v", "--verbose",
+                    help="turn on verbose output", action="store_true")
+parser.add_argument("-maxLat", "--maximumLatitude",
+                    help="the maximum latitude default:DEF_MAX_LAT", default=DEF_MAX_LAT, type=float)
+parser.add_argument("-minLat", "--minimumLatitude",
+                    help="the minimum latitude default:" + DEF_MIN_LAT, default=DEF_MIN_LAT, type=float)
+parser.add_argument("-maxLon", "--maximumLongitude",
+                    help="the maximum longitude default:" + DEF_MAX_LON, default=DEF_MAX_LON, type=float)
+parser.add_argument("-minLon", "--minimumLongitude",
+                    help="the minimum longitude default:" + DEF_MIN_LON, default=DEF_MIN_LON, type=float)
+parser.add_argument("-rf", "--reductionFactor",
+                    help="the reduction factor default:" + DEF_RED_FAC + " min:" + MIN_RED_FAC + " max:" + MAX_RED_FAC, default=DEF_RED_FAC, type=float)
 
 # Parse the command line arguments
 args = parser.parse_args()
@@ -29,6 +44,13 @@ minLat = args.minimumLatitude
 maxLat = args.maximumLatitude
 minLon = args.minimumLongitude
 maxLon = args.maximumLongitude
+
+if args.reductionFactor < MIN_RED_FAC:
+  print "Raising reduction factor to ", MIN_RED_FAC
+  args.reductionFactor = MIN_RED_FAC
+elif args.reductionFactor > MAX_RED_FAC:
+  print "Lowering reduction factor to ", MAX_RED_FAC
+  args.reductionFactor = MAX_RED_FAC
 reductionFactor = args.reductionFactor
 
 if args.verbose:
@@ -36,12 +58,6 @@ if args.verbose:
   print "Maximum latitude set to", args.maximumLatitude
   print "Minimum longitude set to", args.minimumLongitude
   print "Maximum longitude set to", args.maximumLongitude
-  if args.reductionFactor < 0:
-    print "Raising reduction factor to 0"
-    args.reductionFactor = 0
-  elif args.reductionFactor > 10:
-    print "Lowering reduction factor to 10"
-    args.reductionFactor = 10;
   print "Reduction factor set to", args.reductionFactor
 
 # Boreal extent
