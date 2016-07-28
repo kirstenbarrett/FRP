@@ -30,6 +30,14 @@ DEF_RED_FAC = 1
 MIN_RED_FAC = 0
 MAX_RED_FAC = 10
 
+DEF_MIN_KER = 5
+MIN_MIN_KER = 0
+MAX_MIN_KER = 100
+
+DEF_MAX_KER = 21
+MIN_MAX_KER = 0
+MAX_MAX_KER = 100
+
 # Argument parser, run with -h for more info
 parser = argparse.ArgumentParser()
 
@@ -62,58 +70,88 @@ parser.add_argument(
   help="the reduction factor default:" + str(DEF_RED_FAC) + " min:" + str(MIN_RED_FAC) + " max:" + str(MAX_RED_FAC),
   default=DEF_RED_FAC, type=float)
 
+parser.add_argument(
+  "-minK", "--minimumKernel",
+  help="the minimum kernel size default:" + str(DEF_MIN_KER) + " min:" + str(MIN_MIN_KER) + " max:" + str(MAX_MIN_KER),
+  default=DEF_MIN_KER, type=int)
+
+parser.add_argument(
+  "-maxK", "--maximumKernel",
+  help="the maximum kernel size default:" + str(DEF_MAX_KER) + " min:" + str(MIN_MAX_KER) + " max:" + str(MAX_MAX_KER),
+  default=DEF_MAX_KER, type=int)
+
 # Parse the command line arguments
 args = parser.parse_args()
 
 if args.minimumLatitude < MIN_MIN_LAT:
   args.minimumLatitude = MIN_MIN_LAT
   if args.verbose:
-    print "Raising minimum latitude to minimum", MIN_MIN_LAT
+    print "Raising minimum latitude to lower bound", MIN_MIN_LAT
 elif args.minimumLatitude > MAX_MIN_LAT:
   args.minimumLatitude = MAX_MIN_LAT
   if args.verbose:
-    print "Lowering minimum latitude to maximum", MAX_MIN_LAT
+    print "Lowering minimum latitude to upper bound", MAX_MIN_LAT
 minLat = args.minimumLatitude
 
 if args.maximumLatitude < MIN_MAX_LAT:
   args.maximumLatitude = MIN_MAX_LAT
   if args.verbose:
-    print "Raising maximum latitude to minimum", MIN_MAX_LAT
+    print "Raising maximum latitude to lower bound", MIN_MAX_LAT
 elif args.maximumLatitude > MAX_MAX_LAT:
   args.maximumLatitude = MAX_MAX_LAT
   if args.verbose:
-    print "Lowering maximum latitude to maximum", MAX_MAX_LAT
+    print "Lowering maximum latitude to upper bound", MAX_MAX_LAT
 maxLat = args.maximumLatitude
 
 if args.minimumLongitude < MIN_MIN_LON:
   args.minimumLongitude = MIN_MIN_LON
   if args.verbose:
-    print "Raising minimum longitude to minimum", MIN_MIN_LON
+    print "Raising minimum longitude to lower bound", MIN_MIN_LON
 elif args.minimumLongitude > MAX_MIN_LON:
   args.minimumLongitude = MAX_MIN_LON
   if args.verbose:
-    print "Lowering minimum longitude to maximum", MAX_MIN_LON
+    print "Lowering minimum longitude to upper bound", MAX_MIN_LON
 minLon = args.minimumLongitude
 
 if args.maximumLongitude < MIN_MAX_LON:
   args.maximumLongitude = MIN_MAX_LON
   if args.verbose:
-    print "Raising maximum longitude to minimum", MIN_MAX_LON
+    print "Raising maximum longitude to lower bound", MIN_MAX_LON
 elif args.maximumLongitude > MAX_MAX_LON:
   args.maximumLongitude = MAX_MAX_LON
   if args.verbose:
-    print "Lowering maximum longitude to maximum", MAX_MAX_LON
+    print "Lowering maximum longitude to upper bound", MAX_MAX_LON
 maxLon = args.maximumLongitude
 
 if args.reductionFactor < MIN_RED_FAC:
   args.reductionFactor = MIN_RED_FAC
   if args.verbose:
-    print "Raising reduction factor to minimum", MIN_RED_FAC
+    print "Raising reduction factor to lower bound", MIN_RED_FAC
 elif args.reductionFactor > MAX_RED_FAC:
   args.reductionFactor = MAX_RED_FAC
   if args.verbose:
-    print "Lowering reduction factor to maximum", MAX_RED_FAC
+    print "Lowering reduction factor to upper bound", MAX_RED_FAC
 reductionFactor = args.reductionFactor
+
+if args.minimumKernel < MIN_MIN_KER:
+  args.minimumKernel = MIN_MIN_KER
+  if args.verbose:
+    print "Raising minimum kernel size to lower bound", MIN_MIN_KER
+if args.minimumKernel > MAX_MIN_KER:
+  args.minimumKernel = MAX_MIN_KER
+  if args.verbose:
+    print "Lowering minimum kernel size to upper bound", MAX_MIN_KER
+minKsize = args.minimumKernel
+
+if args.maximumKernel < MIN_MAX_KER:
+  args.maximumKernel = MIN_MAX_KER
+  if args.verbose:
+    print "Raising maximum kernel size to lower bound", MIN_MAX_KER
+if args.maximumKernel > MAX_MAX_KER:
+  args.maximumKernel = MAX_MAX_KER
+  if args.verbose:
+    print "Lowering maximum kernel size to upper bound", MAX_MAX_KER
+maxKsize = args.maximumKernel
 
 # Verbose output configured settings
 if args.verbose:
@@ -122,19 +160,11 @@ if args.verbose:
   print "Minimum longitude set to", minLon
   print "Maximum longitude set to", maxLon
   print "Reduction factor set to", reductionFactor
+  print "Minimum kernel size set to", minKsize
+  print "Maximum kernel size set to", maxKsize
 
-# Boreal extent
-minX = -511738.931
-minY = 1176158.734
-maxX = 672884.463
-maxY = 2117721.949
-
-nProjRows = np.int_(np.rint((maxY - minY) / 1000))
-nProjCols = np.int_(np.rint((maxX - minX) / 1000))
 minNcount = 8
 minNfrac = 0.25
-minKsize = 5
-maxKsize = 21
 b22saturationVal = 331
 increaseFactor = 1 + (1 - reductionFactor)
 waterFlag = -1
