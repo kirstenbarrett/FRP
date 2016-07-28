@@ -9,11 +9,22 @@ import math
 import argparse
 import os.path
 
-# Constants
+# Constants for upper/lower bounds
 DEF_MAX_LAT = 65
+MIN_MAX_LAT = -90
+MAX_MAX_LAT = 90
+
 DEF_MIN_LAT = 65.525
+MIN_MIN_LAT = -90
+MAX_MIN_LAT = 90
+
 DEF_MAX_LON = -146
+MIN_MAX_LON = -180
+MAX_MAX_LON = 180
+
 DEF_MIN_LON = -148
+MIN_MIN_LON = -180
+MAX_MIN_LON = 180
 
 DEF_RED_FAC = 1
 MIN_RED_FAC = 0
@@ -23,42 +34,94 @@ MAX_RED_FAC = 10
 parser = argparse.ArgumentParser()
 
 # Command line arguments
-parser.add_argument("-v", "--verbose",
-                    help="turn on verbose output", action="store_true")
-parser.add_argument("-maxLat", "--maximumLatitude",
-                    help="the maximum latitude default:DEF_MAX_LAT", default=DEF_MAX_LAT, type=float)
-parser.add_argument("-minLat", "--minimumLatitude",
-                    help="the minimum latitude default:" + DEF_MIN_LAT, default=DEF_MIN_LAT, type=float)
-parser.add_argument("-maxLon", "--maximumLongitude",
-                    help="the maximum longitude default:" + DEF_MAX_LON, default=DEF_MAX_LON, type=float)
-parser.add_argument("-minLon", "--minimumLongitude",
-                    help="the minimum longitude default:" + DEF_MIN_LON, default=DEF_MIN_LON, type=float)
-parser.add_argument("-rf", "--reductionFactor",
-                    help="the reduction factor default:" + DEF_RED_FAC + " min:" + MIN_RED_FAC + " max:" + MAX_RED_FAC, default=DEF_RED_FAC, type=float)
+parser.add_argument(
+  "-v", "--verbose", help="turn on verbose output", action="store_true")
+
+parser.add_argument(
+  "-maxLat", "--maximumLatitude",
+  help="the maximum latitude default:" + str(DEF_MAX_LAT) + " min:" + str(MIN_MAX_LAT) + " max:" + str(MAX_MAX_LAT),
+  default=DEF_MAX_LAT, type=float)
+
+parser.add_argument(
+  "-minLat", "--minimumLatitude",
+  help="the minimum latitude default:" + str(DEF_MIN_LAT) + " min:" + str(MIN_MIN_LAT) + " max:" + str(MAX_MIN_LAT),
+  default=DEF_MIN_LAT, type=float)
+
+parser.add_argument(
+  "-maxLon", "--maximumLongitude",
+  help="the maximum longitude default:" + str(DEF_MAX_LON) + " min:" + str(MIN_MAX_LON) + " max:" + str(MAX_MAX_LON),
+  default=DEF_MAX_LON, type=float)
+
+parser.add_argument(
+  "-minLon", "--minimumLongitude",
+  help="the minimum longitude default:" + str(DEF_MIN_LON) + " min:" + str(MIN_MIN_LON) + " max:" + str(MAX_MIN_LON),
+  default=DEF_MIN_LON, type=float)
+
+parser.add_argument(
+  "-rf", "--reductionFactor",
+  help="the reduction factor default:" + str(DEF_RED_FAC) + " min:" + str(MIN_RED_FAC) + " max:" + str(MAX_RED_FAC),
+  default=DEF_RED_FAC, type=float)
 
 # Parse the command line arguments
 args = parser.parse_args()
 
-# Boundary min/max longitude/latitude
+if args.minimumLatitude < MIN_MIN_LAT:
+  args.minimumLatitude = MIN_MIN_LAT
+  if args.verbose:
+    print "Raising minimum latitude to minimum", MIN_MIN_LAT
+elif args.minimumLatitude > MAX_MIN_LAT:
+  args.minimumLatitude = MAX_MIN_LAT
+  if args.verbose:
+    print "Lowering minimum latitude to maximum", MAX_MIN_LAT
 minLat = args.minimumLatitude
+
+if args.maximumLatitude < MIN_MAX_LAT:
+  args.maximumLatitude = MIN_MAX_LAT
+  if args.verbose:
+    print "Raising maximum latitude to minimum", MIN_MAX_LAT
+elif args.maximumLatitude > MAX_MAX_LAT:
+  args.maximumLatitude = MAX_MAX_LAT
+  if args.verbose:
+    print "Lowering maximum latitude to maximum", MAX_MAX_LAT
 maxLat = args.maximumLatitude
+
+if args.minimumLongitude < MIN_MIN_LON:
+  args.minimumLongitude = MIN_MIN_LON
+  if args.verbose:
+    print "Raising minimum longitude to minimum", MIN_MIN_LON
+elif args.minimumLongitude > MAX_MIN_LON:
+  args.minimumLongitude = MAX_MIN_LON
+  if args.verbose:
+    print "Lowering minimum longitude to maximum", MAX_MIN_LON
 minLon = args.minimumLongitude
+
+if args.maximumLongitude < MIN_MAX_LON:
+  args.maximumLongitude = MIN_MAX_LON
+  if args.verbose:
+    print "Raising maximum longitude to minimum", MIN_MAX_LON
+elif args.maximumLongitude > MAX_MAX_LON:
+  args.maximumLongitude = MAX_MAX_LON
+  if args.verbose:
+    print "Lowering maximum longitude to maximum", MAX_MAX_LON
 maxLon = args.maximumLongitude
 
 if args.reductionFactor < MIN_RED_FAC:
-  print "Raising reduction factor to ", MIN_RED_FAC
   args.reductionFactor = MIN_RED_FAC
+  if args.verbose:
+    print "Raising reduction factor to minimum", MIN_RED_FAC
 elif args.reductionFactor > MAX_RED_FAC:
-  print "Lowering reduction factor to ", MAX_RED_FAC
   args.reductionFactor = MAX_RED_FAC
+  if args.verbose:
+    print "Lowering reduction factor to maximum", MAX_RED_FAC
 reductionFactor = args.reductionFactor
 
+# Verbose output configured settings
 if args.verbose:
-  print "Minimum latitude set to", args.minimumLatitude
-  print "Maximum latitude set to", args.maximumLatitude
-  print "Minimum longitude set to", args.minimumLongitude
-  print "Maximum longitude set to", args.maximumLongitude
-  print "Reduction factor set to", args.reductionFactor
+  print "Minimum latitude set to", minLat
+  print "Maximum latitude set to", maxLat
+  print "Minimum longitude set to", minLon
+  print "Maximum longitude set to", maxLon
+  print "Reduction factor set to", reductionFactor
 
 # Boreal extent
 minX = -511738.931
