@@ -786,7 +786,6 @@ def process(filMOD02, minLat, maxLat, minLon, maxLon):
          FRP_MAD_DT, FRPpower, FRP_AdjCloud, FRP_AdjWater, FRP_NumValid, FRP_confidence])
       hdr = '"FRPline","FRPsample","FRPlats","FRPlons","FRPT21","FRPT31","FRPMeanT21","FRPMeanT31","FRPMeanDT","FRPMADT21","FRPMADT31","FRP_MAD_DT","FRPpower","FRP_AdjCloud","FRP_AdjWater","FRP_NumValid","FRP_confidence"'
       np.savetxt(filMOD02.replace('hdf', '') + 'frp20160512_hdf_hps.csv', exportCSV, delimiter=",", header=hdr)
-      print "runing"
 
 def run(datapath, procid, minLat, maxLat, minLon, maxLon):
 
