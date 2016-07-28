@@ -19,7 +19,7 @@ parser.add_argument("-minLon", "--minimumLongitude", help="the minimum longitude
 parser.add_argument("-maxLon", "--maximumLongitude", help="the maximum longitude (-146 by default)", default=-146, type=float)
 parser.add_argument("-v", "--verbose", help="turn on verbose output", action="store_true")
 # TODO add these in ALICE version
-parser.add_argument("-rf", "--reductionFactor", help="the reduction factor (1 by default)", default=1, type=float)
+parser.add_argument("-rf", "--reductionFactor", help="the reduction factor (1 by default) min=0 max=10", default=1, type=float)
 
 # Parse the command line arguments
 args = parser.parse_args()
@@ -39,9 +39,9 @@ if args.verbose:
   if args.reductionFactor < 0:
     print "Raising reduction factor to 0"
     args.reductionFactor = 0
-  elif args.reductionFactor > 1:
-    print "Lowering reduction factor to 1"
-    args.reductionFactor = 1;
+  elif args.reductionFactor > 10:
+    print "Lowering reduction factor to 10"
+    args.reductionFactor = 10;
   print "Reduction factor set to", args.reductionFactor
 
 # Boreal extent
