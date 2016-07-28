@@ -12,11 +12,14 @@ import os.path
 # Argument parser, run with -h for more info
 parser = argparse.ArgumentParser()
 
-# Minimum/Maximum longitude/latitude command line arguments
+# Command line arguments
 parser.add_argument("-minLat", "--minimumLatitude", help="the minimum latitude (65 by default)", default=65, type=float)
 parser.add_argument("-maxLat", "--maximumLatitude", help="the maximum latitude (65.525 by default)", default=65.525, type=float)
 parser.add_argument("-minLon", "--minimumLongitude", help="the minimum longitude (-148 by default)", default=-148, type=float)
 parser.add_argument("-maxLon", "--maximumLongitude", help="the maximum longitude (-146 by default)", default=-146, type=float)
+parser.add_argument("-v", "--verbose", help="turn on verbose output", action="store_true")
+# TODO add these in ALICE version
+parser.add_argument("-rf", "--reductionFactor", help="the reduction factor (1 by default)", default=1, type=float)
 
 # Parse the command line arguments
 args = parser.parse_args()
@@ -26,6 +29,20 @@ minLat = args.minimumLatitude
 maxLat = args.maximumLatitude
 minLon = args.minimumLongitude
 maxLon = args.maximumLongitude
+reductionFactor = args.reductionFactor
+
+if args.verbose:
+  print "Minimum latitude set to", args.minimumLatitude
+  print "Maximum latitude set to", args.maximumLatitude
+  print "Minimum longitude set to", args.minimumLongitude
+  print "Maximum longitude set to", args.maximumLongitude
+  if args.reductionFactor < 0:
+    print "Raising reduction factor to 0"
+    args.reductionFactor = 0
+  elif args.reductionFactor > 1:
+    print "Lowering reduction factor to 1"
+    args.reductionFactor = 1;
+  print "Reduction factor set to", args.reductionFactor
 
 # Boreal extent
 minX = -511738.931
@@ -33,7 +50,6 @@ minY = 1176158.734
 maxX = 672884.463
 maxY = 2117721.949
 
-# Constants
 nProjRows = np.int_(np.rint((maxY - minY) / 1000))
 nProjCols = np.int_(np.rint((maxX - minX) / 1000))
 minNcount = 8
@@ -41,7 +57,6 @@ minNfrac = 0.25
 minKsize = 5
 maxKsize = 21
 b22saturationVal = 331
-reductionFactor = 1
 increaseFactor = 1 + (1 - reductionFactor)
 waterFlag = -1
 cloudFlag = -2
