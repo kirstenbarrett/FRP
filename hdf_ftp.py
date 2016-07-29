@@ -50,7 +50,6 @@ for hdf02 in HDF02:
 
     if args.verbose:
       print("Skipping download of " + hdf02)
-
     continue
 
   if args.verbose:
@@ -68,7 +67,7 @@ for hdf02 in HDF02:
     print("Successfully downloaded " + hdf02)
     print("Searching for corresponding HDF03 file")
 
-  # Parse the HDF02 in order to get the HDF03
+  # Parse the HDF02 in order to get the corresponding HDF03
   filSplt = hdf02.split('.')
   datTim = filSplt[1].replace('A', '') + filSplt[2]
   t = datetime.datetime.strptime(datTim, "%Y%j%H%M")
@@ -85,7 +84,7 @@ for hdf02 in HDF02:
   mint = '0' * mintZeros + mint
   datNam = yr + julianDay + '.' + hr + mint
 
-  # Get the corresponding HDF03
+  # Check to see if the HDF03 exists in the HDF03 list
   hdf03found = False
   for filNamCandidate in HDF03:
     if datNam in filNamCandidate:
@@ -104,7 +103,9 @@ for hdf02 in HDF02:
         print("Skipping download of " + hdf03)
       continue
 
-    print("Attempting download of " + hdf03)
+    if args.verbose:
+      print("Attempting download of " + hdf03)
+
     fp = open(os.path.join('.', hdf03), "wb")
     curl = pycurl.Curl()
     curl.setopt(pycurl.URL, host + hdf03)
@@ -112,8 +113,12 @@ for hdf02 in HDF02:
     curl.perform()
     curl.close()
     fp.close()
-    print("Successfully downloaded " + hdf03)
-  else:
+
+    if args.verbose:
+      print("Successfully downloaded " + hdf03)
+
+  elif args.verbose:
+    
     print("No corresponding HDF03 file found")
 
   dlCount += 1
