@@ -8,7 +8,7 @@ The order number which is obtained from the form is required as a program argume
 
 For program usage instructions use option `-h` on the command line.
 
-### Running FRP on OSX
+## Running FRP on OSX
 
 Install **command line tools** `xcode-select –install`
 
