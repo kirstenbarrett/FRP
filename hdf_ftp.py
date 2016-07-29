@@ -38,16 +38,19 @@ order = output.getvalue().decode('UTF-8').split()
 
 dlCount = 0
 
-# Let's get both the HDF03s and HDF02s
+# Let's get a list of both the HDF03s and HDF02s
 HDF03 = [hdf for hdf in order if ".hdf" in hdf and "D03" in hdf]
 HDF02 = [hdf for hdf in order if ".hdf" in hdf and "D02" in hdf]
 
 # Download all HDF02s with the corresponding HDF03s if they exist
 for hdf02 in HDF02:
 
-  # The HDF already exists skip the download
-  if os.path.exists(hdf02) and args.verbose:
-    print("Skipping download of " + hdf02)
+  # The HDF02 already exists and has been downloaded successfully
+  if os.path.exists(hdf02) and order[order.index(hdf02) - 4] == os.path.getsize(hdf02):
+
+    if args.verbose:
+      print("Skipping download of " + hdf02)
+
     continue
 
   if args.verbose:
@@ -65,7 +68,7 @@ for hdf02 in HDF02:
     print("Successfully downloaded " + hdf02)
     print("Searching for corresponding HDF03 file")
 
-  # Let's get the corresponding HDF03
+  # Parse the HDF02 in order to get the HDF03
   filSplt = hdf02.split('.')
   datTim = filSplt[1].replace('A', '') + filSplt[2]
   t = datetime.datetime.strptime(datTim, "%Y%j%H%M")
@@ -82,28 +85,36 @@ for hdf02 in HDF02:
   mint = '0' * mintZeros + mint
   datNam = yr + julianDay + '.' + hr + mint
 
-  hdf03found = False
   # Get the corresponding HDF03
+  hdf03found = False
   for filNamCandidate in HDF03:
     if datNam in filNamCandidate:
       hdf03 = filNamCandidate
       hdf03found = True
       break
 
-  if args.verbose:
-    if hdf03found:
+  if hdf03found:
+
+    if args.verbose:
       print("Corresponding HDF03 file found")
-      print("Attempting download of " + hdf03)
-      fp = open(os.path.join('.', hdf03), "wb")
-      curl = pycurl.Curl()
-      curl.setopt(pycurl.URL, host + hdf03)
-      curl.setopt(pycurl.WRITEDATA, fp)
-      curl.perform()
-      curl.close()
-      fp.close()
-      print("Successfully downloaded " + hdf03)
-    else:
-      print("No corresponding HDF03 file found")
+
+    # The HDF03 already exists and has been downloaded successfully
+    if os.path.exists(hdf03) and order[order.index(hdf03) - 4] == os.path.getsize(hdf03):
+      if args.verbose:
+        print("Skipping download of " + hdf03)
+      continue
+
+    print("Attempting download of " + hdf03)
+    fp = open(os.path.join('.', hdf03), "wb")
+    curl = pycurl.Curl()
+    curl.setopt(pycurl.URL, host + hdf03)
+    curl.setopt(pycurl.WRITEDATA, fp)
+    curl.perform()
+    curl.close()
+    fp.close()
+    print("Successfully downloaded " + hdf03)
+  else:
+    print("No corresponding HDF03 file found")
 
   dlCount += 1
 
