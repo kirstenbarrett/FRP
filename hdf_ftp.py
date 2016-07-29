@@ -3,44 +3,37 @@
 import argparse
 import pycurl
 import os.path
-
-try:
-    from StringIO import StringIO
-except ImportError:
-    from io import StringIO
+from io import BytesIO
 
 # Argument parser, run with -h for more info
 parser = argparse.ArgumentParser()
 
 # The order id argument
 parser.add_argument("ORDER", help="the data order id", type=str)
-
 # Max download count for HDFs
 parser.add_argument("-dl", "--downloadLimit", help="limit the amount of HDF files to download", default=0, type=int)
-
 # Verbosity output
 parser.add_argument("-v", "--verbose", help="turn on verbose output", action="store_true")
 
-# Parse the command line arguments
 args = parser.parse_args()
 
 if args.verbose:
   print("Connecting to order " + args.ORDER)
 
 # Build the ftp host with the order id
-host = 'ftp://ladsweb.nascom.nasa.gov/orders/' + args.ORDER + '/'
+host = "ftp://ladsweb.nascom.nasa.gov/orders/" + args.ORDER + "/"
 
 # Initiate curl
 c = pycurl.Curl()
 c.setopt(pycurl.URL, host)
 
 # String output buffer for curl return
-output = StringIO.StringIO()
+output = BytesIO()
 c.setopt(pycurl.WRITEFUNCTION, output.write)
 
 # Execute curl and get the order from the output buffer
 c.perform()
-order = output.getvalue().split()
+order = output.getvalue().decode('UTF-8').split()
 
 dlCount = 0
 
