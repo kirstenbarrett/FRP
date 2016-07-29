@@ -7,35 +7,7 @@ from osgeo import gdal
 import datetime
 from scipy.stats import gmean
 import math
-cimport numpy as np
-
-minNcount = 8
-minNfrac = 0.25
-minKsize = 5
-maxKsize = 21
-b22saturationVal = 331
-reductionFactor = 1
-increaseFactor = 1 + (1 - reductionFactor)
-waterFlag = -1
-cloudFlag = -2
-bgFlag = -3
-resolution = 5
-datsWdata = []
-
-# Coefficients for radiance calculations
-coeff1 = 119104200
-coeff2 = 14387.752
-lambda21and22 = 3.959
-lambda31 = 11.009
-lambda32 = 12.02
-
-# Layers for reading in HDF files
-layersMOD02 = ['EV_1KM_Emissive', 'EV_250_Aggr1km_RefSB', 'EV_500_Aggr1km_RefSB']
-layersMOD03 = ['Land/SeaMask', 'Latitude', 'Longitude', 'SolarAzimuth', 'SolarZenith', 'SensorAzimuth', 'SensorZenith']
-
-# HDFs
-HDF03 = [hdf for hdf in os.listdir('.') if ".hdf" in hdf and "D03" in hdf]
-HDF02 = [hdf for hdf in os.listdir('.') if ".hdf" in hdf and "D02" in hdf]
+# cimport numpy as np
 
 def adjCloud(kernel):
   nghbors = kernel[range(0, 4) + range(5, 9)]
@@ -134,7 +106,7 @@ def runFilt(band, filtFunc, minKsize, maxKsize):
 
   return bandFilt
 
-def wakelinMeanMADFilter(band, maxKsize, minKsize):
+def wakelinMeanMADFilter(band, maxKsize, minKsize, minNcount, minNfrac):
   bSize = (maxKsize - 1) / 2
   bandMatrix = np.pad(band, ((bSize, bSize), (bSize, bSize)), mode='symmetric')
 
@@ -197,7 +169,7 @@ def wakelinMeanMADFilter(band, maxKsize, minKsize):
 
   return bandFiltMean2, bandFiltMAD2
 
-def wakelinMeanFilter(band, maxKsize, minKsize):
+def wakelinMeanFilter(band, maxKsize, minKsize, minNcount, minNfrac):
   # Add boundary for largest known tile size (maxKsize)
   bSize = (maxKsize - 1) / 2
   bandMatrix = np.pad(band, ((bSize, bSize), (bSize, bSize)), mode='symmetric')
@@ -250,7 +222,7 @@ def wakelinMeanFilter(band, maxKsize, minKsize):
 
   return bandFiltMean2
 
-def wakelinMADFilter(band, maxKsize, minKsize):
+def wakelinMADFilter(band, maxKsize, minKsize, minNcount, minNfrac):
   # Add boundary for largest known tile size (maxKsize)
   bSize = (maxKsize - 1) / 2
   bandMatrix = np.pad(band, ((bSize, bSize), (bSize, bSize)), mode='symmetric')
@@ -307,7 +279,26 @@ def wakelinMADFilter(band, maxKsize, minKsize):
 
   return bandFiltMAD2
 
-def process(filMOD02, minLat, maxLat, minLon, maxLon):
+def process(filMOD02, HDF03, minLat, maxLat, minLon, maxLon, reductionFactor, minNcount, minNfrac, minKsize, maxKsize):
+
+  b22saturationVal = 331
+  increaseFactor = 1 + (1 - reductionFactor)
+  waterFlag = -1
+  cloudFlag = -2
+  bgFlag = -3
+  resolution = 5
+  datsWdata = []
+
+  # Coefficients for radiance calculations
+  coeff1 = 119104200
+  coeff2 = 14387.752
+  lambda21and22 = 3.959
+  lambda31 = 11.009
+  lambda32 = 12.02
+
+  # Layers for reading in HDF files
+  layersMOD02 = ['EV_1KM_Emissive', 'EV_250_Aggr1km_RefSB', 'EV_500_Aggr1km_RefSB']
+  layersMOD03 = ['Land/SeaMask', 'Latitude', 'Longitude', 'SolarAzimuth', 'SolarZenith', 'SensorAzimuth', 'SensorZenith']
 
   filSplt = filMOD02.split('.')
   datTim = filSplt[1].replace('A', '') + filSplt[2]
@@ -531,14 +522,14 @@ def process(filMOD02, minLat, maxLat, minLon, maxLon):
     deltaTbgMask[np.where(bgMask == bgFlag)] = bgFlag
 
     # Mean and mad filters - mad needed for confidence estimation
-    b22meanFilt, b22MADfilt = wakelinMeanMADFilter(b22bgMask, maxKsize, minKsize)
+    b22meanFilt, b22MADfilt = wakelinMeanMADFilter(b22bgMask, maxKsize, minKsize, minNcount, minNfrac)
     b22minusBG = np.copy(b22CloudWaterMasked) - np.copy(b22meanFilt)
-    b31meanFilt, b31MADfilt = wakelinMeanMADFilter(b31bgMask, maxKsize, minKsize)
-    deltaTmeanFilt, deltaTMADFilt = wakelinMeanMADFilter(deltaTbgMask, maxKsize, minKsize)
+    b31meanFilt, b31MADfilt = wakelinMeanMADFilter(b31bgMask, maxKsize, minKsize, minNcount, minNfrac)
+    deltaTmeanFilt, deltaTMADFilt = wakelinMeanMADFilter(deltaTbgMask, maxKsize, minKsize, minNcount, minNfrac)
 
     b22bgRej = np.copy(allArrays['BAND22'])
     b22bgRej[np.where(bgMask != bgFlag)] = bgFlag
-    b22rejMeanFilt, b22rejMADfilt = wakelinMeanMADFilter(b22bgRej, maxKsize, minKsize)
+    b22rejMeanFilt, b22rejMADfilt = wakelinMeanMADFilter(b22bgRej, maxKsize, minKsize, minNcount, minNfrac)
 
     # Potential fire test
     potFire = np.zeros((nRows, nCols), dtype=np.int)
@@ -778,8 +769,11 @@ def process(filMOD02, minLat, maxLat, minLon, maxLon):
       hdr = '"FRPline","FRPsample","FRPlats","FRPlons","FRPT21","FRPT31","FRPMeanT21","FRPMeanT31","FRPMeanDT","FRPMADT21","FRPMADT31","FRP_MAD_DT","FRPpower","FRP_AdjCloud","FRP_AdjWater","FRP_NumValid","FRP_confidence"'
       np.savetxt(filMOD02.replace('hdf', '') + 'frp20160512_hdf_hps.csv', exportCSV, delimiter=",", header=hdr)
 
-def run(datapath, procid, minLat, maxLat, minLon, maxLon):
 
-  [process(hdf, minLat, maxLat, minLon, maxLon) for hdf in HDF02]
+def run(datapath, procid, minLat, maxLat, minLon, maxLon, reductionFactor, minNcount, minNfrac, minKsize, maxKsize):
 
-# run('.', 0, 65, 65.525, -148, -146)
+  HDF03 = [hdf for hdf in os.listdir('.') if ".hdf" in hdf and "D03" in hdf]
+  HDF02 = [hdf for hdf in os.listdir('.') if ".hdf" in hdf and "D02" in hdf]
+  [process(hdf, HDF03, minLat, maxLat, minLon, maxLon, reductionFactor, minNcount, minNfrac, minKsize, maxKsize) for hdf in HDF02]
+
+run('', 0, 65, 65.525, -148, -146, 1, 8, 0.25, 5, 21)
