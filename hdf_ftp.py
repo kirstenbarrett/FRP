@@ -20,7 +20,7 @@ parser.add_argument("-v", "--verbose", help="turn on verbose output", action="st
 args = parser.parse_args()
 
 if args.verbose:
-  print "Connecting to order " + args.ORDER
+  print("Connecting to order " + args.ORDER)
 
 # Build the ftp host with the order id
 host = 'ftp://ladsweb.nascom.nasa.gov/orders/' + args.ORDER + '/'
@@ -47,11 +47,11 @@ for info in order:
 
   # The HDF already exists skip the download
   if os.path.exists(info) and args.verbose:
-    print "Skipping download of " + info
+    print("Skipping download of " + info)
     continue
 
   if args.verbose:
-    print "Attempting download of " + info
+    print("Attempting download of " + info)
 
   fp = open(os.path.join('.', info), "wb")
   curl = pycurl.Curl()
@@ -62,14 +62,14 @@ for info in order:
   fp.close()
 
   if args.verbose:
-    print "Successfully downloaded " + info
+    print("Successfully downloaded " + info)
 
   dlCount += 1
 
   if args.downloadLimit == dlCount:
     if args.verbose:
-      print "HDF download limit reached"
+      print("HDF download limit reached")
     break
 
 if args.verbose:
-  print "FTP download of order successful"
+  print("FTP download of order successful")

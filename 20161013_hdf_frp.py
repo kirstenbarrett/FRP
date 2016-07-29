@@ -104,104 +104,104 @@ args = parser.parse_args()
 if args.minimumLatitude < MIN_MIN_LAT:
   args.minimumLatitude = MIN_MIN_LAT
   if args.verbose:
-    print "Raising minimum latitude to lower bound", MIN_MIN_LAT
+    print("Raising minimum latitude to lower bound", MIN_MIN_LAT)
 elif args.minimumLatitude > MAX_MIN_LAT:
   args.minimumLatitude = MAX_MIN_LAT
   if args.verbose:
-    print "Lowering minimum latitude to upper bound", MAX_MIN_LAT
+    print("Lowering minimum latitude to upper bound", MAX_MIN_LAT)
 minLat = args.minimumLatitude
 
 if args.maximumLatitude < MIN_MAX_LAT:
   args.maximumLatitude = MIN_MAX_LAT
   if args.verbose:
-    print "Raising maximum latitude to lower bound", MIN_MAX_LAT
+    print("Raising maximum latitude to lower bound", MIN_MAX_LAT)
 elif args.maximumLatitude > MAX_MAX_LAT:
   args.maximumLatitude = MAX_MAX_LAT
   if args.verbose:
-    print "Lowering maximum latitude to upper bound", MAX_MAX_LAT
+    print("Lowering maximum latitude to upper bound", MAX_MAX_LAT)
 maxLat = args.maximumLatitude
 
 if args.minimumLongitude < MIN_MIN_LON:
   args.minimumLongitude = MIN_MIN_LON
   if args.verbose:
-    print "Raising minimum longitude to lower bound", MIN_MIN_LON
+    print("Raising minimum longitude to lower bound", MIN_MIN_LON)
 elif args.minimumLongitude > MAX_MIN_LON:
   args.minimumLongitude = MAX_MIN_LON
   if args.verbose:
-    print "Lowering minimum longitude to upper bound", MAX_MIN_LON
+    print("Lowering minimum longitude to upper bound", MAX_MIN_LON)
 minLon = args.minimumLongitude
 
 if args.maximumLongitude < MIN_MAX_LON:
   args.maximumLongitude = MIN_MAX_LON
   if args.verbose:
-    print "Raising maximum longitude to lower bound", MIN_MAX_LON
+    print("Raising maximum longitude to lower bound", MIN_MAX_LON)
 elif args.maximumLongitude > MAX_MAX_LON:
   args.maximumLongitude = MAX_MAX_LON
   if args.verbose:
-    print "Lowering maximum longitude to upper bound", MAX_MAX_LON
+    print("Lowering maximum longitude to upper bound", MAX_MAX_LON)
 maxLon = args.maximumLongitude
 
 if args.reductionFactor < MIN_RED_FAC:
   args.reductionFactor = MIN_RED_FAC
   if args.verbose:
-    print "Raising reduction factor to lower bound", MIN_RED_FAC
+    print("Raising reduction factor to lower bound", MIN_RED_FAC)
 elif args.reductionFactor > MAX_RED_FAC:
   args.reductionFactor = MAX_RED_FAC
   if args.verbose:
-    print "Lowering reduction factor to upper bound", MAX_RED_FAC
+    print("Lowering reduction factor to upper bound", MAX_RED_FAC)
 reductionFactor = args.reductionFactor
 
 if args.minimumKernel < MIN_MIN_KER:
   args.minimumKernel = MIN_MIN_KER
   if args.verbose:
-    print "Raising minimum kernel size to lower bound", MIN_MIN_KER
+    print("Raising minimum kernel size to lower bound", MIN_MIN_KER)
 if args.minimumKernel > MAX_MIN_KER:
   args.minimumKernel = MAX_MIN_KER
   if args.verbose:
-    print "Lowering minimum kernel size to upper bound", MAX_MIN_KER
+    print("Lowering minimum kernel size to upper bound", MAX_MIN_KER)
 minKsize = args.minimumKernel
 
 if args.maximumKernel < MIN_MAX_KER:
   args.maximumKernel = MIN_MAX_KER
   if args.verbose:
-    print "Raising maximum kernel size to lower bound", MIN_MAX_KER
+    print("Raising maximum kernel size to lower bound", MIN_MAX_KER)
 if args.maximumKernel > MAX_MAX_KER:
   args.maximumKernel = MAX_MAX_KER
   if args.verbose:
-    print "Lowering maximum kernel size to upper bound", MAX_MAX_KER
+    print("Lowering maximum kernel size to upper bound", MAX_MAX_KER)
 maxKsize = args.maximumKernel
 
 if args.windowObservations < MIN_WIN_OBV:
   args.windowObservations = MIN_WIN_OBV
   if args.verbose:
-    print "Raising window observation count to lower bound", MIN_WIN_OBV
+    print("Raising window observation count to lower bound", MIN_WIN_OBV)
 elif args.windowObservations > MAX_WIN_OBV:
   args.windowObservations = MAX_WIN_OBV
   if args.verbose:
-    print "Lowering window observation count to upper bound", MAX_WIN_OBV
+    print("Lowering window observation count to upper bound", MAX_WIN_OBV)
 minNcount = args.windowObservations
 
 if args.validFraction < MIN_VLD_FRC:
   args.validFraction = MIN_VLD_FRC
   if args.verbose:
-    print "Raising valid fraction of observations to lower bound", MIN_VLD_FRC
+    print("Raising valid fraction of observations to lower bound", MIN_VLD_FRC)
 elif args.validFraction > MAX_VLD_FRC:
   args.validFraction = MAX_VLD_FRC
   if args.verbose:
-    print "Lowering valid fraction of observations to upper bound", MAX_VLD_FRC
+    print("Lowering valid fraction of observations to upper bound", MAX_VLD_FRC)
 minNfrac = args.validFraction
 
 # Verbose output configured settings
 if args.verbose:
-  print "Minimum latitude set to", minLat
-  print "Maximum latitude set to", maxLat
-  print "Minimum longitude set to", minLon
-  print "Maximum longitude set to", maxLon
-  print "Reduction factor set to", reductionFactor
-  print "Minimum kernel size set to", minKsize
-  print "Maximum kernel size set to", maxKsize
-  print "Window observation count set to", minNcount
-  print "Valid fraction of observations set to", minNfrac
+  print("Minimum latitude set to", minLat)
+  print("Maximum latitude set to", maxLat)
+  print("Minimum longitude set to", minLon)
+  print("Maximum longitude set to", maxLon)
+  print("Reduction factor set to", reductionFactor)
+  print("Minimum kernel size set to", minKsize)
+  print("Maximum kernel size set to", maxKsize)
+  print("Window observation count set to", minNcount)
+  print("Valid fraction of observations set to", minNfrac)
 
 b22saturationVal = 331
 increaseFactor = 1 + (1 - reductionFactor)
