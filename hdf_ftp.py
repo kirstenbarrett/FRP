@@ -1,8 +1,13 @@
 #!/usr/bin/python
+
 import argparse
 import pycurl
-import StringIO
 import os.path
+
+try:
+    from StringIO import StringIO
+except ImportError:
+    from io import StringIO
 
 # Argument parser, run with -h for more info
 parser = argparse.ArgumentParser()
