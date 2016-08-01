@@ -12,7 +12,7 @@ parser = argparse.ArgumentParser()
 # The order id argument
 parser.add_argument("ORDER", help="the data order id", type=str)
 # Max download count for HDFs
-parser.add_argument("-dl", "--downloadLimit", help="limit the amount of HDF files to download", default=0, type=int)
+parser.add_argument("-dl", "--downloadLimit", help="limit the amount of HDF file pairs to download", default=0, type=int)
 # Verbosity output
 parser.add_argument("-v", "--verbose", help="turn on verbose output", action="store_true")
 
@@ -70,7 +70,7 @@ for hdf02 in HDF02:
 
   # Both a HDF02 and HDF03 have been found
   if hdf03:
-    if os.path.exists(hdf02) and order[order.index(hdf02) - 4] == os.path.getsize(hdf02):
+    if os.path.exists(hdf02) and int(order[order.index(hdf02) - 4]) == os.path.getsize(hdf02):
       if args.verbose:
         print("Skipping download of " + hdf02)
     else:
@@ -86,7 +86,7 @@ for hdf02 in HDF02:
       if args.verbose:
         print("Successfully downloaded " + hdf02)
 
-    if os.path.exists(hdf03) and order[order.index(hdf03) - 4] == os.path.getsize(hdf03):
+    if os.path.exists(hdf03) and int(order[order.index(hdf03) - 4]) == os.path.getsize(hdf03):
       if args.verbose:
         print("Skipping download of " + hdf03)
     else:
@@ -101,9 +101,6 @@ for hdf02 in HDF02:
       fp.close()
       if args.verbose:
         print("Successfully downloaded " + hdf03)
-  else:
-    if args.verbose:
-      print("Searching for a file pair to download")
 
   dlCount += 1
 
