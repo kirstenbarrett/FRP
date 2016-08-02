@@ -226,6 +226,29 @@ layersMOD03 = ['Land/SeaMask', 'Latitude', 'Longitude', 'SolarAzimuth', 'SolarZe
 HDF03 = [hdf for hdf in os.listdir('.') if ".hdf" in hdf and "D03" in hdf]
 HDF02 = [hdf for hdf in os.listdir('.') if ".hdf" in hdf and "D02" in hdf]
 
+# meanMadFilt
+footprintx = []
+footprinty = []
+Ncount = []
+ksizes = []
+for s in range(minKsize, maxKsize+2,2):
+    halfSize = (s-1)/2
+    xlist = []
+    ylist = []
+    for x in range(-halfSize,halfSize+1):
+        for y in range(-halfSize,halfSize+1):
+            if x is 0:
+                if abs(y)>1:
+                    xlist.append(x)
+                    ylist.append(y)
+            else:
+                xlist.append(x)
+                ylist.append(y)
+    footprintx.append(np.array(xlist))
+    footprinty.append(np.array(ylist))
+    Ncount.append(len(xlist))
+    ksizes.append(s)
+
 def adjCloud(kernel):
   nghbors = kernel[range(0, 4) + range(5, 9)]
   cloudNghbors = kernel[np.where(nghbors == 1)]
@@ -323,68 +346,52 @@ def runFilt(band, filtFunc, minKsize, maxKsize):
 
   return bandFilt
 
-def wakelinMeanMADFilter(band, maxKsize, minKsize):
+def meanMadFilt(rawband, minKsize, maxKsize):
+  sizex, sizey = np.shape(rawband)
   bSize = (maxKsize - 1) / 2
-  bandMatrix = np.pad(band, ((bSize, bSize), (bSize, bSize)), mode='symmetric')
+  padsizex = sizex + 2 * bSize
+  padsizey = sizey + 2 * bSize
+  band = np.pad(rawband, ((bSize, bSize), (bSize, bSize)), mode='symmetric')
+  meanFilt = np.full([padsizex, padsizey], -4.0, dtype=np.float32)
+  madFilt = np.full([padsizex, padsizey], -4.0, dtype=np.float32)
 
-  bandFiltsMean2 = {}
-  bandFiltsMAD2 = {}
-  kSize = minKsize
-  i, j = np.shape(band)
+  divTable = 1.0 / np.arange(1, maxKsize * maxKsize, dtype=np.float64)
+  divTable = np.insert(divTable, 0, 0)
 
-  while kSize <= maxKsize:
+  nmin = min(minNcount, minNfrac * minKsize * minKsize)
+  for y in range(bSize, sizey + bSize):
+    for x in range(bSize, sizex + bSize):
+      centerVal = band[x, y]
+      if centerVal not in range(-2, 0):
+        if meanFilt[x, y] == -4:
+          neighbours = band[x + footprintx[0], y + footprinty[0]]
+          neighbours = neighbours[np.where(neighbours > 0)]
+          nn = len(neighbours)
+          if (nn > nmin):
+            bgMean = np.sum(neighbours) * divTable[nn]
+            meanFilt[x, y] = bgMean
+            meanDists = np.abs(neighbours - bgMean)
+            bgMAD = np.sum(meanDists) * divTable[nn]
+            madFilt[x, y] = bgMAD
 
-    bandMADFilt2_tmp = np.full([i, j], -4.0)
-    bandMeanFilt2_tmp = np.full([i, j], -4.0)
+  for i in range(1, len(ksizes)):
+    nmin = min(minNcount, minNfrac * ksizes[i] * ksizes[i])
+    for y in range(bSize, sizey + bSize):
+      for x in range(bSize, sizex + bSize):
+        centerVal = band[x, y]
+        if centerVal == -4:
+          if meanFilt[x, y] == -4:
+            neighbours = band[x + footprintx[i], y + footprinty[i]]
+            neighbours = neighbours[np.where(neighbours > 0)]
+            nn = len(neighbours)
+            if (nn > nmin):
+              bgMean = np.sum(neighbours) * divTable[nn]
+              meanFilt[x, y] = bgMean
+              meanDists = np.abs(neighbours - bgMean)
+              bgMAD = np.sum(meanDists) * divTable[nn]
+              madFilt[x, y] = bgMAD
 
-    halfK = (kSize - 1) / 2
-    for x in range(bSize, i + bSize):
-      for y in range(bSize, j + bSize):
-
-        xmhk = x - halfK
-        xphk = x + halfK + 1
-        ymhk = y - halfK
-        yphk = y + halfK + 1
-
-        # Must copy kernel otherwise it is a reference to original array - hence original is changed!
-        kernel = bandMatrix[xmhk:xphk:1, ymhk:yphk:1].copy()
-        centerVal = bandMatrix[x, y]
-
-        if ((kSize == minKsize) | (centerVal == -4)) & (centerVal not in (range(-2, 0))):
-          fpMask = makeFootprint(kSize)
-          kernel[np.where(fpMask < 0)] = -5
-          nghbrs = kernel[np.where(kernel > 0)]
-          nghbrCnt = len(nghbrs)
-
-          if (nghbrCnt > minNcount) & (nghbrCnt > (minNfrac * (kSize ** 2))):
-            bgMean = np.mean(nghbrs)
-            meanDists = np.abs(nghbrs - bgMean)
-            bgMAD = np.mean(meanDists)
-
-            # Remember - Results matrix is smaller than padded dataset by bSize in all directions
-            xmb = x - bSize
-            ymb = y - bSize
-            bandMADFilt2_tmp[xmb, ymb] = bgMAD
-            bandMeanFilt2_tmp[xmb, ymb] = bgMean
-
-    filtNameMean2 = 'bandFiltMean' + str(kSize)
-    bandFiltsMean2[filtNameMean2] = bandMeanFilt2_tmp
-    filtNameMAD2 = 'bandFiltMAD' + str(kSize)
-    bandFiltsMAD2[filtNameMAD2] = bandMADFilt2_tmp
-
-    kSize += 2
-
-  bandFiltMean2 = bandFiltsMean2['bandFiltMean' + str(minKsize)]
-  bandFiltMAD2 = bandFiltsMAD2['bandFiltMAD' + str(minKsize)]
-  kSize = minKsize + 2
-
-  while kSize <= maxKsize:
-    bandFiltMean2[np.where(bandFiltMean2 == -4)] = bandFiltsMean2['bandFiltMean' + str(kSize)][
-      np.where(bandFiltMean2 == -4)]
-    bandFiltMAD2[np.where(bandFiltMAD2 == -4)] = bandFiltsMAD2['bandFiltMAD' + str(kSize)][np.where(bandFiltMAD2 == -4)]
-    kSize += 2
-
-  return bandFiltMean2, bandFiltMAD2
+  return meanFilt[bSize:-bSize, bSize:-bSize], madFilt[bSize:-bSize, bSize:-bSize]
 
 def process(filMOD02):
 
@@ -610,14 +617,14 @@ def process(filMOD02):
     deltaTbgMask[np.where(bgMask == bgFlag)] = bgFlag
 
     # Mean and mad filters - mad needed for confidence estimation
-    b22meanFilt, b22MADfilt = wakelinMeanMADFilter(b22bgMask, maxKsize, minKsize)
+    b22meanFilt, b22MADfilt = meanMadFilt(b22bgMask, maxKsize, minKsize)
     b22minusBG = np.copy(b22CloudWaterMasked) - np.copy(b22meanFilt)
-    b31meanFilt, b31MADfilt = wakelinMeanMADFilter(b31bgMask, maxKsize, minKsize)
-    deltaTmeanFilt, deltaTMADFilt = wakelinMeanMADFilter(deltaTbgMask, maxKsize, minKsize)
+    b31meanFilt, b31MADfilt = meanMadFilt(b31bgMask, maxKsize, minKsize)
+    deltaTmeanFilt, deltaTMADFilt = meanMadFilt(deltaTbgMask, maxKsize, minKsize)
 
     b22bgRej = np.copy(allArrays['BAND22'])
     b22bgRej[np.where(bgMask != bgFlag)] = bgFlag
-    b22rejMeanFilt, b22rejMADfilt = wakelinMeanMADFilter(b22bgRej, maxKsize, minKsize)
+    b22rejMeanFilt, b22rejMADfilt = meanMadFilt(b22bgRej, maxKsize, minKsize)
 
     # Potential fire test
     potFire = np.zeros((nRows, nCols), dtype=np.int)
