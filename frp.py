@@ -10,11 +10,11 @@ import argparse
 import os.path
 
 # Constants for upper/lower bounds
-DEF_MAX_LAT = 65
+DEF_MAX_LAT = 65.525
 MIN_MAX_LAT = -90
 MAX_MAX_LAT = 90
 
-DEF_MIN_LAT = 65.525
+DEF_MIN_LAT = 65
 MIN_MIN_LAT = -90
 MAX_MIN_LAT = 90
 
