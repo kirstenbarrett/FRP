@@ -162,8 +162,14 @@ def meanMadFilt(np.ndarray[np.float32_t, ndim=2] rawband, int minKsize, int maxK
 
 def process(filMOD02, HDF03, minLat, maxLat, minLon, maxLon, reductionFactor, minNcount, minNfrac, minKsize, maxKsize):
 
+  reductionFactor = float(reductionFactor)
+  minNcount = float(minNcount)
+  minNfrac = float(minNfrac)
+  minKsize = float(minKsize)
+  maxKsize = float(maxKsize)
+
   b22saturationVal = 331
-  increaseFactor = 1 + (1 - float(reductionFactor))
+  increaseFactor = 1 + (1 - reductionFactor)
   waterFlag = -1
   cloudFlag = -2
   bgFlag = -3
