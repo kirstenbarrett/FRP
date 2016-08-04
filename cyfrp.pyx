@@ -106,12 +106,12 @@ def runFilt(band, filtFunc, minKsize, maxKsize):
 
   return bandFilt
 
-def meanMadFilt(np.ndarray[np.float32_t, ndim=2] rawband, int minKsize, int maxKsize, minNcount, minNfrac, footprintx, footprinty, ksizes):
+def meanMadFilt(np.ndarray[np.float64_t, ndim=2] rawband, int minKsize, int maxKsize, minNcount, minNfrac, footprintx, footprinty, ksizes):
     cdef int sizex, sizey, bSize, padsizex, padsizey, i, x, y, nmin, nn
     cdef float centerVal, bgMean
-    cdef np.ndarray[np.float32_t, ndim=1] meanDists, neighbours
-    cdef np.ndarray[np.float32_t, ndim=2] meanFilt,madFilt
-    cdef np.ndarray[np.float32_t, ndim=2] band
+    cdef np.ndarray[np.float64_t, ndim=1] meanDists, neighbours
+    cdef np.ndarray[np.float64_t, ndim=2] meanFilt,madFilt
+    cdef np.ndarray[np.float64_t, ndim=2] band
     cdef np.ndarray[np.float64_t, ndim=1] divTable #Higher precision needed
 
     sizex, sizey = np.shape(rawband)
@@ -119,8 +119,8 @@ def meanMadFilt(np.ndarray[np.float32_t, ndim=2] rawband, int minKsize, int maxK
     padsizex = sizex+2*bSize
     padsizey = sizey+2*bSize
     band = np.pad(rawband,((bSize,bSize),(bSize,bSize)),mode='symmetric')
-    meanFilt = np.full([padsizex,padsizey], -4.0, dtype=np.float32)
-    madFilt = np.full([padsizex,padsizey], -4.0, dtype=np.float32)
+    meanFilt = np.full([padsizex,padsizey], -4.0, dtype=np.float64)
+    madFilt = np.full([padsizex,padsizey], -4.0, dtype=np.float64)
 
     divTable = 1.0/np.arange(1,maxKsize*maxKsize, dtype=np.float64)
     divTable = np.insert(divTable,0,0)
@@ -162,11 +162,21 @@ def meanMadFilt(np.ndarray[np.float32_t, ndim=2] rawband, int minKsize, int maxK
 
 def process(filMOD02, HDF03, minLat, maxLat, minLon, maxLon, reductionFactor, minNcount, minNfrac, minKsize, maxKsize):
 
+  cdef np.ndarray[np.float64_t, ndim=2] data
+  cdef np.ndarray[np.float64_t, ndim=2] dayFlag,waterMask,cloudMask
+  cdef np.ndarray[np.float64_t, ndim=2] b21CloudWaterMasked,b22CloudWaterMasked
+  cdef np.ndarray[np.float64_t, ndim=2] b31CloudWaterMasked,deltaTCloudWaterMasked
+  cdef np.ndarray[np.float64_t, ndim=2] bgMask,b21bgMask,b22bgMask,b31bgMask,deltaTbgmask
+  cdef np.ndarray[np.float64_t, ndim=2] b22meanFilt,b22MADfilt
+  cdef np.ndarray[np.float64_t, ndim=2] b31meanFilt,b31MADfilt
+  cdef np.ndarray[np.float64_t, ndim=2] deltaTmeanFilt, deltaTMADFilt
+  cdef np.ndarray[np.float64_t, ndim=2] b22rejMeanFilt,b22rejMADfilt
+
   reductionFactor = float(reductionFactor)
-  minNcount = float(minNcount)
+  minNcount = int(minNcount)
   minNfrac = float(minNfrac)
-  minKsize = float(minKsize)
-  maxKsize = float(maxKsize)
+  minKsize = int(minKsize)
+  maxKsize = int(maxKsize)
 
   b22saturationVal = 331
   increaseFactor = 1 + (1 - reductionFactor)
@@ -380,15 +390,15 @@ def process(filMOD02, HDF03, minLat, maxLat, minLon, maxLon, reductionFactor, mi
       np.where(allArrays['BAND22'] >= b22saturationVal)]
 
     # Day/Night flag
-    dayFlag = np.zeros((nRows, nCols), dtype=np.int)
+    dayFlag = np.zeros((nRows, nCols), dtype=np.float64)
     dayFlag[np.where(allArrays['SolarZenith'] < 8500)] = 1
 
     # Create water mask
-    waterMask = np.zeros((nRows, nCols), dtype=np.int)
+    waterMask = np.zeros((nRows, nCols), dtype=np.float64)
     waterMask[np.where(allArrays['LANDMASK'] != 1)] = waterFlag
 
     # Crate cloud mask
-    cloudMask = np.zeros((nRows, nCols), dtype=np.int)
+    cloudMask = np.zeros((nRows, nCols), dtype=np.float64)
     cloudMask[((allArrays['BAND1x1k'] + allArrays['BAND2x1k']) > 900)] = cloudFlag
     cloudMask[(allArrays['BAND32'] < 265)] = cloudFlag
     cloudMask[((allArrays['BAND1x1k'] + allArrays['BAND2x1k']) > 700) & (allArrays['BAND32'] < 285)] = cloudFlag
@@ -412,7 +422,7 @@ def process(filMOD02, HDF03, minLat, maxLat, minLon, maxLon, reductionFactor, mi
     deltaTCloudWaterMasked[np.where(cloudMask == cloudFlag)] = cloudFlag
 
     # After all the data has been read
-    bgMask = np.zeros((nRows, nCols), dtype=np.int)
+    bgMask = np.zeros((nRows, nCols), dtype=np.float64)
 
     with np.errstate(invalid='ignore'):
       bgMask[np.where(
@@ -598,7 +608,8 @@ def process(filMOD02, HDF03, minLat, maxLat, minLon, maxLon, reductionFactor, mi
       b22maskEXP = b22firesAllMask.astype(float) ** 8
       b22bgEXP = b22bgAllMask.astype(float) ** 8
 
-      frpMW = 4.34 * (10 ** (-19)) * (b22maskEXP - b22bgEXP)  # AREA TERM HERE
+      # frpMW = 4.34 * (10 ** (-19)) * (b22maskEXP - b22bgEXP)  # AREA TERM HERE
+      frpMW = 4.34e-19 * (b22maskEXP-b22bgEXP)
 
       frpMWabs = frpMW * potFire
 
