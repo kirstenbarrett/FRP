@@ -608,9 +608,7 @@ def process(filMOD02, HDF03, minLat, maxLat, minLon, maxLon, reductionFactor, mi
       b22maskEXP = b22firesAllMask.astype(float) ** 8
       b22bgEXP = b22bgAllMask.astype(float) ** 8
 
-      # frpMW = 4.34 * (10 ** (-19)) * (b22maskEXP - b22bgEXP)  # AREA TERM HERE
       frpMW = 4.34e-19 * (b22maskEXP-b22bgEXP)
-
       frpMWabs = frpMW * potFire
 
       # Detection confidence
