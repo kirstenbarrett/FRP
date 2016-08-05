@@ -3,6 +3,9 @@
 import sys
 import re
 import cyfrp
+import pstats
+import cProfile
+import time
 
 target = sys.argv[1]
 
@@ -25,4 +28,21 @@ minKsize = data[0]
 maxKsize = data[1]
 
 input.close()
-cyfrp.run(target, ay, by, ax, bx, reductionFactor, minNcount, minNfrac, minKsize, maxKsize)
+
+if (False):
+
+  cyfrp.run(target, ay, by, ax, bx, reductionFactor, minNcount, minNfrac, minKsize, maxKsize)
+
+else:
+
+  filename = 'profiles/{}'.format(time.strftime('%y%m%d%a.%H%M%S'))
+
+  runStr = 'cyfrp.run("' + target + '",' + str(ay) + ',' + str(by) + ',' + str(ax) + ',' + str(bx) + \
+           ',' + reductionFactor + ',' + minNcount + ',' + minNfrac + ',' + minKsize + ',' + maxKsize + ')'
+
+  cProfile.runctx(runStr, globals(), locals(), '{}.prof'.format(filename))
+  s = pstats.Stats('{}.prof'.format(filename))
+  s.strip_dirs().sort_stats('time').print_stats(10)
+
+  s = pstats.Stats('{}.prof'.format(filename), stream=open('{}.txt'.format(filename),'w'))
+  s.strip_dirs().sort_stats('time').print_stats()
