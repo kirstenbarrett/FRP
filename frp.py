@@ -46,6 +46,10 @@ DEF_VLD_FRC = 0.25
 MIN_VLD_FRC = 0.1
 MAX_VLD_FRC = 1
 
+DEF_DEC_PLC = 2
+MIN_DEC_PLC = 0
+MAX_DEC_PLC = 5
+
 # Argument parser, run with -h for more info
 parser = argparse.ArgumentParser()
 
@@ -97,6 +101,12 @@ parser.add_argument(
   "-vldFrc", "--validFraction",
   help="valid fraction of valid observations default:" + str(DEF_VLD_FRC) + " min:" + str(MIN_VLD_FRC) + " max:" + str(MAX_VLD_FRC),
   default=DEF_VLD_FRC, type=float)
+
+parser.add_argument(
+  "-dec", "--decimal",
+  help="Set the decimal places in the output:" + str(DEF_DEC_PLC) + " min:" + str(MIN_DEC_PLC) + " max:" + str(MAX_DEC_PLC),
+  default=DEF_DEC_PLC, type=float)
+
 
 # Parse the command line arguments
 args = parser.parse_args()
@@ -191,6 +201,16 @@ elif args.validFraction > MAX_VLD_FRC:
     print("Lowering valid fraction of observations to upper bound", MAX_VLD_FRC)
 minNfrac = args.validFraction
 
+if args.decimal < MIN_DEC_PLC:
+  args.decimal = MIN_DEC_PLC
+  if args.verbose:
+    print("Raising decimal output to lower bound", MIN_DEC_PLC)
+elif args.decimal > MAX_DEC_PLC:
+  args.decimal = MAX_DEC_PLC
+  if args.verbose:
+    print("Lowering decimal output to upper bound", MAX_DEC_PLC)
+decimal = args.decimal
+
 # Verbose output configured settings
 if args.verbose:
   print("Minimum latitude set to", minLat)
@@ -202,6 +222,7 @@ if args.verbose:
   print("Maximum kernel size set to", maxKsize)
   print("Window observation count set to", minNcount)
   print("Valid fraction of observations set to", minNfrac)
+  print("Decimal output set to", decimal)
 
 b22saturationVal = 331
 increaseFactor = 1 + (1 - reductionFactor)
@@ -863,6 +884,6 @@ def process(filMOD02):
          FRP_MAD_DT, FRPpower, FRP_AdjCloud, FRP_AdjWater, FRP_NumValid, FRP_confidence])
 
       hdr = '"FRPline","FRPsample","FRPlats","FRPlons","FRPT21","FRPT31","FRPMeanT21","FRPMeanT31","FRPMeanDT","FRPMADT21","FRPMADT31","FRP_MAD_DT","FRPpower","FRP_AdjCloud","FRP_AdjWater","FRP_NumValid","FRP_confidence"'
-      np.savetxt(filMOD02.replace('hdf', '') + '_frp_hdf_hps.csv', exportCSV, delimiter="\t\t", header=hdr, fmt='%.2f')
+      np.savetxt(filMOD02.replace('hdf', '') + "csv", exportCSV, delimiter="\t\t", header=hdr, fmt="%." + str(decimal) + "f")
 
 map(process, HDF02)
