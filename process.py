@@ -25,4 +25,4 @@ minKsize = data[0]
 maxKsize = data[1]
 
 input.close()
-cyfrp.run(target, 0, ay, by, ax, bx, reductionFactor, minNcount, minNfrac, minKsize, maxKsize)
+cyfrp.run(target, ay, by, ax, bx, reductionFactor, minNcount, minNfrac, minKsize, maxKsize)

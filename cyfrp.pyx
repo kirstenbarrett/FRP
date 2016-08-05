@@ -690,7 +690,7 @@ def process(filMOD02, HDF03, minLat, maxLat, minLon, maxLon, reductionFactor, mi
       hdr = '"FRPline","FRPsample","FRPlats","FRPlons","FRPT21","FRPT31","FRPMeanT21","FRPMeanT31","FRPMeanDT","FRPMADT21","FRPMADT31","FRP_MAD_DT","FRPpower","FRP_AdjCloud","FRP_AdjWater","FRP_NumValid","FRP_confidence"'
       np.savetxt(filMOD02.replace('hdf', '') + '_frp_hdf_hps.csv', exportCSV, delimiter="\t\t", header=hdr, fmt='%.2f')
 
-def run(datapath, procid, minLat, maxLat, minLon, maxLon, reductionFactor, minNcount, minNfrac, minKsize, maxKsize):
+def run(datapath, minLat, maxLat, minLon, maxLon, reductionFactor, minNcount, minNfrac, minKsize, maxKsize):
 
   HDF03 = [hdf for hdf in os.listdir('.') if ".hdf" in hdf and "D03" in hdf]
   HDF02 = [hdf for hdf in os.listdir('.') if ".hdf" in hdf and "D02" in hdf]
