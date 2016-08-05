@@ -27,9 +27,11 @@ data = re.findall("\-?[0-9.]+", kSize)
 minKsize = data[0]
 maxKsize = data[1]
 
+doProfiling = input.readline()
+
 input.close()
 
-if (False):
+if (doProfiling.upper() == "FALSE"):
 
   cyfrp.run(target, ay, by, ax, bx, reductionFactor, minNcount, minNfrac, minKsize, maxKsize)
 
