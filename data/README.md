@@ -19,3 +19,7 @@ Specifies the minimum valid fraction of valid obversations.
 ## line 5
 
 Specifies the kernel size in the order **minimum kernel size**, **maximum kernel size** delimited by spaces.
+
+## line 6
+
+Specifies whether to enable profiling for the program or not. **TRUE** to enable and **FALSE** to disable.
