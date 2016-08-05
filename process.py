@@ -27,20 +27,23 @@ data = re.findall("\-?[0-9.]+", kSize)
 minKsize = data[0]
 maxKsize = data[1]
 
+decimalPlaces = input.readline()
+
 doProfiling = input.readline()
 
 input.close()
 
 if (doProfiling.upper() == "FALSE"):
 
-  cyfrp.run(target, ay, by, ax, bx, reductionFactor, minNcount, minNfrac, minKsize, maxKsize)
+  cyfrp.run(target, ay, by, ax, bx, reductionFactor, minNcount, minNfrac, minKsize, maxKsize, decimalPlaces)
 
 else:
 
   filename = 'profiles/{}'.format(time.strftime('%y%m%d%a.%H%M%S'))
 
   runStr = 'cyfrp.run("' + target + '",' + str(ay) + ',' + str(by) + ',' + str(ax) + ',' + str(bx) + \
-           ',' + reductionFactor + ',' + minNcount + ',' + minNfrac + ',' + minKsize + ',' + maxKsize + ')'
+           ',' + reductionFactor + ',' + minNcount + ',' + minNfrac + ',' + minKsize + ',' + maxKsize + \
+           ',' + decimalPlaces + ')'
 
   cProfile.runctx(runStr, globals(), locals(), '{}.prof'.format(filename))
   s = pstats.Stats('{}.prof'.format(filename))

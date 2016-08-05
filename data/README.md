@@ -22,4 +22,8 @@ Specifies the kernel size in the order **minimum kernel size**, **maximum kernel
 
 ## line 6
 
+Specifies the amount of decimal places the output should be delivered as.
+
+## line 7
+
 Specifies whether to enable profiling for the program or not. **TRUE** to enable and **FALSE** to disable.

@@ -160,7 +160,7 @@ def meanMadFilt(np.ndarray[np.float64_t, ndim=2] rawband, int minKsize, int maxK
 
     return meanFilt[bSize:-bSize,bSize:-bSize], madFilt[bSize:-bSize,bSize:-bSize]
 
-def process(filMOD02, HDF03, minLat, maxLat, minLon, maxLon, reductionFactor, minNcount, minNfrac, minKsize, maxKsize):
+def process(filMOD02, HDF03, minLat, maxLat, minLon, maxLon, reductionFactor, minNcount, minNfrac, minKsize, maxKsize, decimalPlaces):
 
   cdef np.ndarray[np.float64_t, ndim=2] data
   cdef np.ndarray[np.float64_t, ndim=2] dayFlag,waterMask,cloudMask
@@ -688,10 +688,10 @@ def process(filMOD02, HDF03, minLat, maxLat, minLon, maxLon, reductionFactor, mi
          FRP_MAD_DT, FRPpower, FRP_AdjCloud, FRP_AdjWater, FRP_NumValid, FRP_confidence])
 
       hdr = '"FRPline","FRPsample","FRPlats","FRPlons","FRPT21","FRPT31","FRPMeanT21","FRPMeanT31","FRPMeanDT","FRPMADT21","FRPMADT31","FRP_MAD_DT","FRPpower","FRP_AdjCloud","FRP_AdjWater","FRP_NumValid","FRP_confidence"'
-      np.savetxt(filMOD02.replace('hdf', '') + '_frp_hdf_hps.csv', exportCSV, delimiter="\t\t", header=hdr, fmt='%.2f')
+      np.savetxt(filMOD02.replace('hdf', '') + '_frp_hdf_hps.csv', exportCSV, delimiter="\t\t", header=hdr, fmt="%." + str(decimalPlaces) + "f")
 
-def run(target, minLat, maxLat, minLon, maxLon, reductionFactor, minNcount, minNfrac, minKsize, maxKsize):
+def run(target, minLat, maxLat, minLon, maxLon, reductionFactor, minNcount, minNfrac, minKsize, maxKsize, decimalPlaces):
 
   HDF03 = [hdf for hdf in os.listdir('.') if ".hdf" in hdf and "D03" in hdf]
   HDF02 = [hdf for hdf in os.listdir('.') if ".hdf" in hdf and "D02" in hdf]
-  [process(hdf, HDF03, minLat, maxLat, minLon, maxLon, reductionFactor, minNcount, minNfrac, minKsize, maxKsize) for hdf in HDF02]
+  [process(hdf, HDF03, minLat, maxLat, minLon, maxLon, reductionFactor, minNcount, minNfrac, minKsize, maxKsize, decimalPlaces) for hdf in HDF02]
