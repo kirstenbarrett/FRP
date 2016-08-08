@@ -10,18 +10,21 @@ import math
 cimport numpy as np
 
 def adjCloud(kernel):
+
   nghbors = kernel[range(0, 4) + range(5, 9)]
   cloudNghbors = kernel[np.where(nghbors == 1)]
   nCloudNghbr = len(cloudNghbors)
   return nCloudNghbr
 
 def adjWater(kernel):
+
   nghbors = kernel[range(0, 4) + range(5, 9)]
   waterNghbors = kernel[np.where(nghbors == 1)]
   nWaterNghbr = len(waterNghbors)
   return nWaterNghbr
 
 def makeFootprint(kSize):
+
   fpZeroLine = (kSize - 1) / 2
   fpZeroColStart = fpZeroLine - 1
   fpZeroColEnd = fpZeroColStart + 3
@@ -29,7 +32,8 @@ def makeFootprint(kSize):
   fp[fpZeroLine, fpZeroColStart:fpZeroColEnd] = -5
   return fp
 
-def nValidFilt(kernel, kSize, minKsize, maxKsize):  # Use background mask files
+def nValidFilt(kernel, kSize, minKsize, maxKsize):
+
   nghbrCnt = -4
   kernel = kernel.reshape((kSize, kSize))
 
@@ -44,6 +48,7 @@ def nValidFilt(kernel, kSize, minKsize, maxKsize):  # Use background mask files
   return nghbrCnt
 
 def nRejectBGfireFilt(kernel, kSize, minKsize, maxKsize):
+
   nRejectBGfire = -4
   kernel = kernel.reshape((kSize, kSize))
   centerVal = kernel[((kSize - 1) / 2), ((kSize - 1) / 2)]
@@ -54,6 +59,7 @@ def nRejectBGfireFilt(kernel, kSize, minKsize, maxKsize):
   return nRejectBGfire
 
 def nRejectWaterFilt(kernel, kSize, minKsize, maxKsize):
+
   nRejectWater = -4
   kernel = kernel.reshape((kSize, kSize))
 
@@ -65,6 +71,7 @@ def nRejectWaterFilt(kernel, kSize, minKsize, maxKsize):
   return nRejectWater
 
 def nUnmaskedWaterFilt(kernel, kSize, minKsize, maxKsize):
+
   nUnmaskedWater = -4
   kernel = kernel.reshape((kSize, kSize))
 
@@ -76,6 +83,7 @@ def nUnmaskedWaterFilt(kernel, kSize, minKsize, maxKsize):
   return nUnmaskedWater
 
 def rampFn(band, rampMin, rampMax):
+
   conf = 0
   confVals = []
   for bandVal in band:
@@ -87,6 +95,7 @@ def rampFn(band, rampMin, rampMax):
   return np.asarray(confVals)
 
 def runFilt(band, filtFunc, minKsize, maxKsize):
+
   filtBand = band
   kSize = minKsize
   bandFilts = {}
@@ -107,12 +116,13 @@ def runFilt(band, filtFunc, minKsize, maxKsize):
   return bandFilt
 
 def meanMadFilt(np.ndarray[np.float64_t, ndim=2] rawband, int minKsize, int maxKsize, minNcount, minNfrac, footprintx, footprinty, ksizes):
+
     cdef int sizex, sizey, bSize, padsizex, padsizey, i, x, y, nmin, nn
     cdef float centerVal, bgMean
     cdef np.ndarray[np.float64_t, ndim=1] meanDists, neighbours
     cdef np.ndarray[np.float64_t, ndim=2] meanFilt,madFilt
     cdef np.ndarray[np.float64_t, ndim=2] band
-    cdef np.ndarray[np.float64_t, ndim=1] divTable #Higher precision needed
+    cdef np.ndarray[np.float64_t, ndim=1] divTable
 
     sizex, sizey = np.shape(rawband)
     bSize = (maxKsize-1)/2
@@ -171,32 +181,26 @@ def process(filMOD02, HDF03, minLat, maxLat, minLon, maxLon, reductionFactor, mi
   cdef np.ndarray[np.float64_t, ndim=2] deltaTmeanFilt, deltaTMADFilt
   cdef np.ndarray[np.float64_t, ndim=2] b22rejMeanFilt,b22rejMADfilt
 
-  reductionFactor = float(reductionFactor)
-  minNcount = int(minNcount)
-  minNfrac = float(minNfrac)
-  minKsize = int(minKsize)
-  maxKsize = int(maxKsize)
-
-  b22saturationVal = 331
-  increaseFactor = 1 + (1 - reductionFactor)
-  waterFlag = -1
-  cloudFlag = -2
-  bgFlag = -3
-  resolution = 5
+  cdef float b22saturationVal = 331
+  cdef float increaseFactor = 1 + (1 - reductionFactor)
+  cdef float waterFlag = -1
+  cdef float cloudFlag = -2
+  cdef float bgFlag = -3
+  cdef float resolution = 5
   datsWdata = []
 
   # Coefficients for radiance calculations
-  coeff1 = 119104200
-  coeff2 = 14387.752
-  lambda21and22 = 3.959
-  lambda31 = 11.009
-  lambda32 = 12.02
+  cdef int coeff1 = 119104200
+  cdef float coeff2 = 14387.752
+  cdef float lambda21and22 = 3.959
+  cdef float lambda31 = 11.009
+  cdef float lambda32 = 12.02
 
   # Layers for reading in HDF files
   layersMOD02 = ['EV_1KM_Emissive', 'EV_250_Aggr1km_RefSB', 'EV_500_Aggr1km_RefSB']
   layersMOD03 = ['Land/SeaMask', 'Latitude', 'Longitude', 'SolarAzimuth', 'SolarZenith', 'SensorAzimuth', 'SensorZenith']
 
-  # meanMadFilt
+  # meanMadFilt footprint
   footprintx = []
   footprinty = []
   Ncount = []
