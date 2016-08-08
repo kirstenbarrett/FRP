@@ -162,11 +162,10 @@ def meanMadFilt(np.ndarray[np.float64_t, ndim=2] rawband, int minKsize, int maxK
 
 def process(filMOD02, HDF03, minLat, maxLat, minLon, maxLon, reductionFactor, minNcount, minNfrac, minKsize, maxKsize, decimalPlaces):
 
-  cdef np.ndarray[np.float64_t, ndim=2] data
   cdef np.ndarray[np.float64_t, ndim=2] dayFlag,waterMask,cloudMask
   cdef np.ndarray[np.float64_t, ndim=2] b21CloudWaterMasked,b22CloudWaterMasked
   cdef np.ndarray[np.float64_t, ndim=2] b31CloudWaterMasked,deltaTCloudWaterMasked
-  cdef np.ndarray[np.float64_t, ndim=2] bgMask,b21bgMask,b22bgMask,b31bgMask,deltaTbgmask
+  cdef np.ndarray[np.float64_t, ndim=2] bgMask,b21bgMask,b22bgMask,b31bgMask
   cdef np.ndarray[np.float64_t, ndim=2] b22meanFilt,b22MADfilt
   cdef np.ndarray[np.float64_t, ndim=2] b31meanFilt,b31MADfilt
   cdef np.ndarray[np.float64_t, ndim=2] deltaTmeanFilt, deltaTMADFilt
