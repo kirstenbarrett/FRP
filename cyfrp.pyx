@@ -170,7 +170,7 @@ def meanMadFilt(np.ndarray[np.float64_t, ndim=2] rawband, int minKsize, int maxK
 
     return meanFilt[bSize:-bSize,bSize:-bSize], madFilt[bSize:-bSize,bSize:-bSize]
 
-def process(filMOD02, HDF03, minLat, maxLat, minLon, maxLon, reductionFactor, minNcount, minNfrac, minKsize, maxKsize, decimalPlaces):
+cdef process(filMOD02, HDF03, float minLat, float maxLat, float minLon, float maxLon, int reductionFactor, int minNcount, float minNfrac, int minKsize, int maxKsize, int decimalPlaces):
 
   cdef np.ndarray[np.float64_t, ndim=2] dayFlag,waterMask,cloudMask
   cdef np.ndarray[np.float64_t, ndim=2] b21CloudWaterMasked,b22CloudWaterMasked
