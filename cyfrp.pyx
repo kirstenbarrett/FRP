@@ -225,20 +225,20 @@ cdef process(filMOD02, HDF03, float minLat, float maxLat, float minLon, float ma
 
   # Get the corresponding HDF03
   filSplt = filMOD02.split('.')
-  datTim = filSplt[1].replace('A', '') + filSplt[2]
+  cdef str datTim = filSplt[1].replace('A', '') + filSplt[2]
   t = datetime.datetime.strptime(datTim, "%Y%j%H%M")
 
-  julianDay = str(t.timetuple().tm_yday)
-  jZeros = 3 - len(julianDay)
+  cdef str julianDay = str(t.timetuple().tm_yday)
+  cdef int jZeros = 3 - len(julianDay)
   julianDay = '0' * jZeros + julianDay
-  yr = str(t.year)
-  hr = str(t.hour)
-  hrZeros = 2 - len(hr)
+  cdef str yr = str(t.year)
+  cdef str hr = str(t.hour)
+  cdef int hrZeros = 2 - len(hr)
   hr = '0' * hrZeros + hr
-  mint = str(t.minute)
-  mintZeros = 2 - len(mint)
+  cdef str mint = str(t.minute)
+  cdef int mintZeros = 2 - len(mint)
   mint = '0' * mintZeros + mint
-  datNam = yr + julianDay + '.' + hr + mint
+  cdef str datNam = yr + julianDay + '.' + hr + mint
 
   # Get the corresponding 03 HDF
   for filNamCandidate in HDF03:
