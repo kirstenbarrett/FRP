@@ -9,6 +9,10 @@ from scipy.stats import gmean
 import math
 cimport numpy as np
 
+# TODO cdef as many functions as I can
+# TODO cdef as many variables as I can
+# TODO Remove as many variables out of loops as I can
+
 def adjCloud(kernel):
 
   nghbors = kernel[range(0, 4) + range(5, 9)]
