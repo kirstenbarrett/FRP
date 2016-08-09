@@ -32,9 +32,9 @@ cdef makeFootprint(int kSize):
   fp[fpZeroLine, fpZeroColStart:fpZeroColEnd] = -5
   return fp
 
-def nValidFilt(kernel, kSize, minKsize, maxKsize):
+cdef nValidFilt(kernel, int kSize, int minKsize, int maxKsize):
 
-  nghbrCnt = -4
+  cdef int nghbrCnt = -4
   kernel = kernel.reshape((kSize, kSize))
 
   centerVal = kernel[((kSize - 1) / 2), ((kSize - 1) / 2)]
