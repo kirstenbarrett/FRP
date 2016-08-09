@@ -47,9 +47,9 @@ cdef nValidFilt(kernel, int kSize, int minKsize, int maxKsize):
 
   return nghbrCnt
 
-def nRejectBGfireFilt(kernel, kSize, minKsize, maxKsize):
+cdef nRejectBGfireFilt(kernel, int kSize, int minKsize, int maxKsize):
 
-  nRejectBGfire = -4
+  cdef int nRejectBGfire = -4
   kernel = kernel.reshape((kSize, kSize))
   centerVal = kernel[((kSize - 1) / 2), ((kSize - 1) / 2)]
 
