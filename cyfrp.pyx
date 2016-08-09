@@ -16,11 +16,11 @@ cdef adjCloud(kernel):
   cdef int nCloudNghbr = len(cloudNghbors)
   return nCloudNghbr
 
-def adjWater(kernel):
+cdef adjWater(kernel):
 
   nghbors = kernel[range(0, 4) + range(5, 9)]
   waterNghbors = kernel[np.where(nghbors == 1)]
-  nWaterNghbr = len(waterNghbors)
+  cdef int nWaterNghbr = len(waterNghbors)
   return nWaterNghbr
 
 def makeFootprint(kSize):
