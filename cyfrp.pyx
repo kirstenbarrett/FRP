@@ -70,9 +70,9 @@ cdef nRejectWaterFilt(kernel, int kSize, int minKsize, int maxKsize):
 
   return nRejectWater
 
-def nUnmaskedWaterFilt(kernel, kSize, minKsize, maxKsize):
+cdef nUnmaskedWaterFilt(kernel, int kSize, int minKsize, int maxKsize):
 
-  nUnmaskedWater = -4
+  cdef int nUnmaskedWater = -4
   kernel = kernel.reshape((kSize, kSize))
 
   centerVal = kernel[((kSize - 1) / 2), ((kSize - 1) / 2)]
