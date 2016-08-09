@@ -82,9 +82,10 @@ cdef nUnmaskedWaterFilt(kernel, int kSize, int minKsize, int maxKsize):
 
   return nUnmaskedWater
 
-cdef rampFn(band, float rampMin, float rampMax):
+# TODO cannot have float, float as FRP_confidence values are not integral
+def rampFn(band, rampMin, rampMax):
 
-  cdef float conf = 0
+  conf = 0
   confVals = []
   for bandVal in band:
     if rampMin < bandVal < rampMax:
