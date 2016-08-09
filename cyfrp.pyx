@@ -95,12 +95,13 @@ def rampFn(band, rampMin, rampMax):
     confVals.append(conf)
   return np.asarray(confVals)
 
-def runFilt(band, filtFunc, minKsize, maxKsize):
+cdef runFilt(band, filtFunc, int minKsize, int maxKsize):
 
   filtBand = band
-  kSize = minKsize
+  cdef int kSize = minKsize
   bandFilts = {}
 
+  cdef filtName;
   while kSize <= maxKsize:
     filtName = 'bandFilt' + str(kSize)
     filtBand = ndimage.generic_filter(filtBand, filtFunc, size=kSize, extra_arguments=(kSize, minKsize, maxKsize))
