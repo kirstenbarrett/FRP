@@ -23,11 +23,11 @@ cdef adjWater(kernel):
   cdef int nWaterNghbr = len(waterNghbors)
   return nWaterNghbr
 
-def makeFootprint(kSize):
+cdef makeFootprint(int kSize):
 
-  fpZeroLine = (kSize - 1) / 2
-  fpZeroColStart = fpZeroLine - 1
-  fpZeroColEnd = fpZeroColStart + 3
+  cdef float fpZeroLine = (kSize - 1) / 2
+  cdef float fpZeroColStart = fpZeroLine - 1
+  cdef float fpZeroColEnd = fpZeroColStart + 3
   fp = np.ones((kSize, kSize), dtype='int_')
   fp[fpZeroLine, fpZeroColStart:fpZeroColEnd] = -5
   return fp
