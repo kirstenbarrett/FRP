@@ -58,9 +58,9 @@ cdef nRejectBGfireFilt(kernel, int kSize, int minKsize, int maxKsize):
 
   return nRejectBGfire
 
-def nRejectWaterFilt(kernel, kSize, minKsize, maxKsize):
+cdef nRejectWaterFilt(kernel, int kSize, int minKsize, int maxKsize):
 
-  nRejectWater = -4
+  cdef int nRejectWater = -4
   kernel = kernel.reshape((kSize, kSize))
 
   centerVal = kernel[((kSize - 1) / 2), ((kSize - 1) / 2)]
