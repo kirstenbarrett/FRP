@@ -10,15 +10,11 @@ import math
 cimport numpy as np
 
 # TODO
-# Validate current result against previous
-# Optimise rampFn (we cannot use float/int as this invalidates the dataset)
-#          Ask kirsten about integer division vs float precision for conf
+#
+# Optimise rampFn (we cannot use float/int as this invalidates the dataset)\
 # Optimise runFilt
-# Optimise meanMadFilt, figure out nmin type (int or float arithmetic)
-# Try and optimise all numerical arrays by converting to cnumpy for Cython
-# Test the program on a large dataset (we can duplicate MOD* files to imitate a large dataset)
-#
-#
+# Optimise meanMadFilt, figure out nmin type (int or float arithmetic)\
+# Test the program on a large dataset (get it working from .scrath/borealfire)
 
 cdef adjCloud(kernel):
 
