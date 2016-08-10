@@ -8,6 +8,10 @@ from scipy.stats import gmean
 import math
 import argparse
 import os.path
+import time
+
+# Start time
+start = time.time()
 
 # Constants for upper/lower bounds
 DEF_MAX_LAT = 65.525
@@ -887,3 +891,9 @@ def process(filMOD02):
       np.savetxt(filMOD02.replace('hdf', '') + "csv", exportCSV, delimiter="\t\t", header=hdr, fmt="%." + str(decimal) + "f")
 
 map(process, HDF02)
+
+# End time
+end = time.time()
+
+if (args.verbose):
+  print("Execution time " + str(end - start))
