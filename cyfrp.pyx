@@ -9,6 +9,16 @@ from scipy.stats import gmean
 import math
 cimport numpy as np
 
+# TODO
+# Optimise rampFn (we cannot use float/int as this invalidates the dataset)
+#          Ask kirsten about integer division vs float precision for conf
+# Optimise runFilt
+# Optimise meanMadFilt, figure out nmin type (int or float arithmetic)
+# Try and optimise all numerical arrays by converting to cnumpy for Cython
+# Test the program on a large dataset (we can duplicate MOD* files to imitate a large dataset)
+#
+#
+
 cdef adjCloud(kernel):
 
   nghbors = kernel[range(0, 4) + range(5, 9)]
@@ -82,7 +92,6 @@ cdef nUnmaskedWaterFilt(kernel, int kSize, int minKsize, int maxKsize):
 
   return nUnmaskedWater
 
-# TODO cannot have float, float as FRP_confidence values are not integral
 def rampFn(band, rampMin, rampMax):
 
   conf = 0
