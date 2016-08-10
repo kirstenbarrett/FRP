@@ -294,7 +294,8 @@ def makeFootprint(kSize):
   fp[fpZeroLine, fpZeroColStart:fpZeroColEnd] = -5
   return fp
 
-def nValidFilt(kernel, kSize, minKsize, maxKsize):  # Use background mask files
+# RETURN NUMBER OF NON-BACKGROUND FIRE, NON-CLOUD, NON-WATER NEIGHBORS
+def nValidFilt(kernel, kSize, minKsize, maxKsize):
   nghbrCnt = -4
   kernel = kernel.reshape((kSize, kSize))
 
@@ -308,6 +309,7 @@ def nValidFilt(kernel, kSize, minKsize, maxKsize):  # Use background mask files
 
   return nghbrCnt
 
+# RETURN NUMBER OF NEIGHBORS REJECTED AS BACKGROUND
 def nRejectBGfireFilt(kernel, kSize, minKsize, maxKsize):
   nRejectBGfire = -4
   kernel = kernel.reshape((kSize, kSize))
@@ -318,6 +320,7 @@ def nRejectBGfireFilt(kernel, kSize, minKsize, maxKsize):
 
   return nRejectBGfire
 
+# RETURN NUMBER OF NEIGHBORS REJECTED AS WATER
 def nRejectWaterFilt(kernel, kSize, minKsize, maxKsize):
   nRejectWater = -4
   kernel = kernel.reshape((kSize, kSize))
@@ -329,6 +332,7 @@ def nRejectWaterFilt(kernel, kSize, minKsize, maxKsize):
 
   return nRejectWater
 
+# RETURN NUMBER OF 'UNMASKED WATER' NEIGHBORS
 def nUnmaskedWaterFilt(kernel, kSize, minKsize, maxKsize):
   nUnmaskedWater = -4
   kernel = kernel.reshape((kSize, kSize))
@@ -351,6 +355,7 @@ def rampFn(band, rampMin, rampMax):
     confVals.append(conf)
   return np.asarray(confVals)
 
+# RUNS FILTERS ON PROGRESSIVELY LARGER KERNEL SIZES, COMBINES RESULTS FROM SMALLEST KSIZE
 def runFilt(band, filtFunc, minKsize, maxKsize):
   filtBand = band
   kSize = minKsize
@@ -370,6 +375,7 @@ def runFilt(band, filtFunc, minKsize, maxKsize):
     kSize += 2
 
   return bandFilt
+
 
 def meanMadFilt(rawband, minKsize, maxKsize):
   sizex, sizey = np.shape(rawband)
@@ -658,7 +664,7 @@ def process(filMOD02):
         allArrays['BAND2x1k'] < (300 * increaseFactor))] = 1
       potFire[(dayFlag == 0) & (allArrays['BAND22'] > (305 * reductionFactor)) & (deltaT > (10 * reductionFactor))] = 1
 
-    # Absolute threshold test for removing sun glint
+    # Absolute threshold test for removing sun glint (Kaufman et al. 1998)
     absValTest = np.zeros((nRows, nCols), dtype=np.int)
     with np.errstate(invalid='ignore'):
       absValTest[(dayFlag == 1) & (allArrays['BAND22'] > (360 * reductionFactor))] = 1
