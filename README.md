@@ -1,6 +1,6 @@
-# FRP on Alice
+# FRP Cython
 
-## Executing
+## Executing on [ALICE](http://www2.le.ac.uk/offices/itservices/ithelp/services/hpc/alice). 
 
 Log into Alice and then on the command line
 
