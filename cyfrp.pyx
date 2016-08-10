@@ -10,6 +10,7 @@ import math
 cimport numpy as np
 
 # TODO
+# Validate current result against previous
 # Optimise rampFn (we cannot use float/int as this invalidates the dataset)
 #          Ask kirsten about integer division vs float precision for conf
 # Optimise runFilt
