@@ -9,6 +9,7 @@ import math
 import argparse
 import os.path
 import time
+import hdf_ftp
 
 # Start time
 start = time.time()
@@ -111,10 +112,18 @@ parser.add_argument(
   help="Set the decimal places in the output:" + str(DEF_DEC_PLC) + " min:" + str(MIN_DEC_PLC) + " max:" + str(MAX_DEC_PLC),
   default=DEF_DEC_PLC, type=float)
 
+# FTP arguments
+parser.add_argument("-order", help="the data order id", type=str)
+parser.add_argument("-dl", "--downloadLimit", help="limit the amount of HDF file pairs to download", default=0, type=int)
 
 # Parse the command line arguments
 args = parser.parse_args()
 
+# We have an FTP to process
+if (args.order):
+  hdf_ftp.main(args.order, args.downloadLimit, args.verbose)
+
+# FRP argument validation
 if args.minimumLatitude < MIN_MIN_LAT:
   args.minimumLatitude = MIN_MIN_LAT
   if args.verbose:
