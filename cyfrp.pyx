@@ -473,7 +473,7 @@ cdef process(filMOD02, HDF03, float minLat, float maxLat, float minLon, float ma
         allArrays['BAND2x1k'] < (300 * increaseFactor))] = 1
       potFire[(dayFlag == 0) & (allArrays['BAND22'] > (305 * reductionFactor)) & (deltaT > (10 * reductionFactor))] = 1
 
-    # Absolute threshold test for removing sun glint
+    # Absolute threshold test for removing sun glint (Kaufman et al. 1998)
     absValTest = np.zeros((nRows, nCols), dtype=np.int)
     with np.errstate(invalid='ignore'):
       absValTest[(dayFlag == 1) & (allArrays['BAND22'] > (360 * reductionFactor))] = 1
