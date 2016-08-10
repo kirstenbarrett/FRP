@@ -113,7 +113,7 @@ parser.add_argument(
   default=DEF_DEC_PLC, type=float)
 
 # FTP arguments
-parser.add_argument("-order", help="the data order id", type=str)
+parser.add_argument("-order", help="the data order id", type=str, nargs='+')
 parser.add_argument("-dl", "--downloadLimit", help="limit the amount of HDF file pairs to download", default=0, type=int)
 
 # Parse the command line arguments
@@ -121,7 +121,7 @@ args = parser.parse_args()
 
 # We have an FTP to process
 if (args.order):
-  hdf_ftp.main(args.order, args.downloadLimit, args.verbose)
+  [hdf_ftp.main(order, args.downloadLimit, args.verbose) for order in args.order]
 
 # FRP argument validation
 if args.minimumLatitude < MIN_MIN_LAT:

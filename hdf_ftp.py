@@ -109,13 +109,12 @@ if __name__ == "__main__":
   parser = argparse.ArgumentParser()
 
   # The order id argument
-  parser.add_argument("ORDER", help="the data order id", type=str)
+  parser.add_argument("ORDER", help="the data order id", type=str, nargs='+')
   # Max download count for HDFs
-  parser.add_argument("-dl", "--downloadLimit", help="limit the amount of HDF file pairs to download", default=0,
-                      type=int)
+  parser.add_argument("-dl", "--downloadLimit", help="limit the amount of HDF file pairs to download", default=0, type=int)
   # Verbosity output
   parser.add_argument("-v", "--verbose", help="turn on verbose output", action="store_true")
 
   args = parser.parse_args()
 
-  main(args.ORDER, args.downloadLimit, args.verbose)
+  [main(order, args.downloadLimit, args.verbose) for order in args.ORDER]
