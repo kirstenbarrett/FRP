@@ -1,3 +1,7 @@
+# Open source fire detection algorithm
+
+The algorithm uses MODIS version 006 data and the Giglio 2016 defaults for values in thresholding and masking.
+
 ## FTP Download of HDFs
 
 To programatically download HDFs via FTP use the `hdf_ftp.py` program.
