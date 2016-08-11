@@ -14,43 +14,52 @@ import hdf_ftp
 # Start time
 start = time.time()
 
-# Constants for upper/lower bounds
+# Maximum latitude default, minimum and maximum
 DEF_MAX_LAT = 65.525
 MIN_MAX_LAT = -90
 MAX_MAX_LAT = 90
 
+# Minimum latitude default, minimum and maximum
 DEF_MIN_LAT = 65
 MIN_MIN_LAT = -90
 MAX_MIN_LAT = 90
 
+# Maximum longitude default, minimum and maximum
 DEF_MAX_LON = -146
 MIN_MAX_LON = -180
 MAX_MAX_LON = 180
 
+# Minimum longitude default, minimum and maximum
 DEF_MIN_LON = -148
 MIN_MIN_LON = -180
 MAX_MIN_LON = 180
 
+# Reduction factor default, minimum and maximum
 DEF_RED_FAC = 1
 MIN_RED_FAC = 0
 MAX_RED_FAC = 10
 
+# Minimum window size default, minimum and maximum
 DEF_MIN_KER = 5
 MIN_MIN_KER = 0
 MAX_MIN_KER = 100
 
+# Maximum window size default, minimum and maximum
 DEF_MAX_KER = 21
 MIN_MAX_KER = 0
 MAX_MAX_KER = 100
 
+# Window observations default, minimum and maximum
 DEF_WIN_OBV = 8
 MIN_WIN_OBV = 1
 MAX_WIN_OBV = 20
 
+# Valid fraction of valid neighbors default, minimum and maximum
 DEF_VLD_FRC = 0.25
 MIN_VLD_FRC = 0.1
 MAX_VLD_FRC = 1
 
+# Decimal places of output default, minimum and maximum
 DEF_DEC_PLC = 2
 MIN_DEC_PLC = 0
 MAX_DEC_PLC = 5
@@ -112,14 +121,14 @@ parser.add_argument(
   help="Set the decimal places in the output:" + str(DEF_DEC_PLC) + " min:" + str(MIN_DEC_PLC) + " max:" + str(MAX_DEC_PLC),
   default=DEF_DEC_PLC, type=float)
 
-# FTP arguments
+# FTP arguments - these must mimic hdf_ftp argparse except for -v
 parser.add_argument("-order", help="the data order id", type=str, nargs='+')
 parser.add_argument("-dl", "--downloadLimit", help="limit the amount of HDF file pairs to download", default=0, type=int)
 
 # Parse the command line arguments
 args = parser.parse_args()
 
-# We have an FTP to process
+# We have an FTP order to invoke
 if (args.order):
   [hdf_ftp.main(order, args.downloadLimit, args.verbose) for order in args.order]
 
@@ -237,6 +246,7 @@ if args.verbose:
   print("Valid fraction of observations set to", minNfrac)
   print("Decimal output set to", decimal)
 
+# Value at which Band 22 saturates (L. Giglio, personal communication)
 b22saturationVal = 331
 increaseFactor = 1 + (1 - reductionFactor)
 waterFlag = -1
@@ -260,7 +270,7 @@ layersMOD03 = ['Land/SeaMask', 'Latitude', 'Longitude', 'SolarAzimuth', 'SolarZe
 HDF03 = [hdf for hdf in os.listdir('.') if ".hdf" in hdf and "D03" in hdf]
 HDF02 = [hdf for hdf in os.listdir('.') if ".hdf" in hdf and "D02" in hdf]
 
-# meanMadFilt
+# Required by meanMadFilt TODO should this be here in global scope?
 footprintx = []
 footprinty = []
 Ncount = []
@@ -283,18 +293,27 @@ for s in range(minKsize, maxKsize+2,2):
     Ncount.append(len(xlist))
     ksizes.append(s)
 
+#
+# Finds the number of adjacent cloud pixels
+#
 def adjCloud(kernel):
   nghbors = kernel[range(0, 4) + range(5, 9)]
   cloudNghbors = kernel[np.where(nghbors == 1)]
   nCloudNghbr = len(cloudNghbors)
   return nCloudNghbr
 
+#
+# Finds the number of adjacent water pixels
+#
 def adjWater(kernel):
   nghbors = kernel[range(0, 4) + range(5, 9)]
   waterNghbors = kernel[np.where(nghbors == 1)]
   nWaterNghbr = len(waterNghbors)
   return nWaterNghbr
 
+#
+# Creates a mask for context tests (must ignore pixels immediately to the right and left of center)
+#
 def makeFootprint(kSize):
   fpZeroLine = (kSize - 1) / 2
   fpZeroColStart = fpZeroLine - 1
@@ -303,7 +322,9 @@ def makeFootprint(kSize):
   fp[fpZeroLine, fpZeroColStart:fpZeroColEnd] = -5
   return fp
 
-# RETURN NUMBER OF NON-BACKGROUND FIRE, NON-CLOUD, NON-WATER NEIGHBORS
+#
+# Returns the number of valid (non-background fire, non-cloud, non-water) neighbors for context tests
+#
 def nValidFilt(kernel, kSize, minKsize, maxKsize):
   nghbrCnt = -4
   kernel = kernel.reshape((kSize, kSize))
@@ -318,7 +339,9 @@ def nValidFilt(kernel, kSize, minKsize, maxKsize):
 
   return nghbrCnt
 
-# RETURN NUMBER OF NEIGHBORS REJECTED AS BACKGROUND
+#
+# Returns the number of neighbors rejected as background fires
+#
 def nRejectBGfireFilt(kernel, kSize, minKsize, maxKsize):
   nRejectBGfire = -4
   kernel = kernel.reshape((kSize, kSize))
@@ -329,7 +352,9 @@ def nRejectBGfireFilt(kernel, kSize, minKsize, maxKsize):
 
   return nRejectBGfire
 
-# RETURN NUMBER OF NEIGHBORS REJECTED AS WATER
+#
+# Returns number of neighbors rejected as water
+#
 def nRejectWaterFilt(kernel, kSize, minKsize, maxKsize):
   nRejectWater = -4
   kernel = kernel.reshape((kSize, kSize))
@@ -341,8 +366,11 @@ def nRejectWaterFilt(kernel, kSize, minKsize, maxKsize):
 
   return nRejectWater
 
-# RETURN NUMBER OF 'UNMASKED WATER' NEIGHBORS
+#
+# Returns the number of 'unmasked water' neighbors
+#
 def nUnmaskedWaterFilt(kernel, kSize, minKsize, maxKsize):
+
   nUnmaskedWater = -4
   kernel = kernel.reshape((kSize, kSize))
 
@@ -353,6 +381,9 @@ def nUnmaskedWaterFilt(kernel, kSize, minKsize, maxKsize):
 
   return nUnmaskedWater
 
+#
+# Generic ramp function used to calculate detection confidence
+#
 def rampFn(band, rampMin, rampMax):
   conf = 0
   confVals = []
@@ -364,7 +395,9 @@ def rampFn(band, rampMin, rampMax):
     confVals.append(conf)
   return np.asarray(confVals)
 
-# RUNS FILTERS ON PROGRESSIVELY LARGER KERNEL SIZES, COMBINES RESULTS FROM SMALLEST KSIZE
+#
+# Runs filters on progressively larger kernel sizes and then combines the result from the smallest kSize
+#
 def runFilt(band, filtFunc, minKsize, maxKsize):
   filtBand = band
   kSize = minKsize
@@ -385,7 +418,10 @@ def runFilt(band, filtFunc, minKsize, maxKsize):
 
   return bandFilt
 
-
+#
+# Calculates mean and mean absolute deviation (MAD) of neighboring pixels in a given band
+# Is used when both mean and MAD is required
+#
 def meanMadFilt(rawband, minKsize, maxKsize):
   sizex, sizey = np.shape(rawband)
   bSize = (maxKsize - 1) / 2
@@ -457,6 +493,7 @@ def process(filMOD02):
       filMOD03 = filNamCandidate
       break
 
+  # Creates a blank dictionary to hold the full MODIS swaths
   fullArrays = {}
 
   for i, layer in enumerate(layersMOD02):
@@ -486,6 +523,7 @@ def process(filMOD02):
       radOffset = radOffsetFlt
       del radOffsetFlt
 
+      # Calculate temperature/reflectance based on scale and offset and correction term (L. Giglio, personal communication)
       B21, B22, B31, B32 = dataMOD02[B21index], dataMOD02[B22index], dataMOD02[B31index], dataMOD02[B32index]
 
       B21scale, B22scale, B31scale, B32scale = radScales[B21index], radScales[B22index], radScales[B31index], radScales[
@@ -592,6 +630,7 @@ def process(filMOD02):
     min1 = np.min(boundCrds1)
     max1 = np.max(boundCrds1)
 
+    # Creates a blank dictionary to hold the cropped MODIS data
     allArrays = {}  # Clipped to min/max lat/long
     for b in fullArrays.keys():
       cropB = fullArrays[b][min0:max0, min1:max1]
@@ -599,11 +638,11 @@ def process(filMOD02):
 
     [nRows, nCols] = np.shape(allArrays['BAND22'])
 
-    # Test for b22 saturation
+    # Test for b22 saturation - replace with values from B21
     allArrays['BAND22'][np.where(allArrays['BAND22'] >= b22saturationVal)] = allArrays['BAND21'][
       np.where(allArrays['BAND22'] >= b22saturationVal)]
 
-    # Day/Night flag
+    # Day/Night flag (Giglio, 2016 Section 3.2)
     dayFlag = np.zeros((nRows, nCols), dtype=np.int)
     dayFlag[np.where(allArrays['SolarZenith'] < 8500)] = 1
 
@@ -611,7 +650,7 @@ def process(filMOD02):
     waterMask = np.zeros((nRows, nCols), dtype=np.int)
     waterMask[np.where(allArrays['LANDMASK'] != 1)] = waterFlag
 
-    # Crate cloud mask
+    # Crate cloud mask (Giglio, 2016 Section 3.2)
     cloudMask = np.zeros((nRows, nCols), dtype=np.int)
     cloudMask[((allArrays['BAND1x1k'] + allArrays['BAND2x1k']) > 900)] = cloudFlag
     cloudMask[(allArrays['BAND32'] < 265)] = cloudFlag
@@ -666,7 +705,7 @@ def process(filMOD02):
     b22bgRej[np.where(bgMask != bgFlag)] = bgFlag
     b22rejMeanFilt, b22rejMADfilt = meanMadFilt(b22bgRej, maxKsize, minKsize)
 
-    # Potential fire test
+    # Potential fire test (Giglio 2016, Section 3.3)
     potFire = np.zeros((nRows, nCols), dtype=np.int)
     with np.errstate(invalid='ignore'):
       potFire[(dayFlag == 1) & (allArrays['BAND22'] > (310 * reductionFactor)) & (deltaT > (10 * reductionFactor)) & (
@@ -678,6 +717,11 @@ def process(filMOD02):
     with np.errstate(invalid='ignore'):
       absValTest[(dayFlag == 1) & (allArrays['BAND22'] > (360 * reductionFactor))] = 1
       absValTest[(dayFlag == 0) & (allArrays['BAND22'] > (305 * reductionFactor))] = 1
+
+    # Context tests - (Giglio 2016, Section 3.5)
+    #
+    # The number associated with each test is the number of the equation in the paper
+    #
 
     # Context fire test 2
     deltaTMADfire = np.zeros((nRows, nCols), dtype=np.int)
@@ -704,7 +748,7 @@ def process(filMOD02):
     with np.errstate(invalid='ignore'):
       B22rejFire[(b22rejMADfilt > 5)] = 1
 
-    # Combine tests to create tentative fires
+    # Combine tests to create tentative fires (Giglio 2016, section 3.5)
     fireLocTentative = deltaTMADfire * deltaTfire * B22fire
 
     fireLocB31andB22rejFire = np.zeros((nRows, nCols), dtype=np.int)
@@ -721,19 +765,19 @@ def process(filMOD02):
     with np.errstate(invalid='ignore'):
       nightFires[((dayFlag == 0) & ((fireLocTentative == 1) | absValTest == 1))] = 1
 
-    # Sun glint rejection
+    # Sun glint rejection 7 (Giglio 2003)
     relAzimuth = allArrays['SensorAzimuth'] - allArrays['SolarAzimuth']
     cosThetaG = (np.cos(allArrays['SensorZenith']) * np.cos(allArrays['SolarZenith'])) - (
       np.sin(allArrays['SensorZenith']) * np.sin(allArrays['SolarZenith']) * np.cos(relAzimuth))
     thetaG = np.arccos(cosThetaG)
     thetaG = (thetaG / 3.141592) * 180
 
-    # Sun glint test 8
+    # Sun glint test 8 (Giglio 2016)
     sgTest8 = np.zeros((nRows, nCols), dtype=np.int)
     with np.errstate(invalid='ignore'):
       sgTest8[np.where(thetaG < 2)] = 1
 
-    # Sun glint test 9
+    # Sun glint test 9 (Giglio 2016)
     sgTest9 = np.zeros((nRows, nCols), dtype=np.int)
     with np.errstate(invalid='ignore'):
       sgTest9[np.where((thetaG < 8) & (allArrays['BAND1x1k'] > 100) & (allArrays['BAND2x1k'] > 200) & (
@@ -763,32 +807,32 @@ def process(filMOD02):
     with np.errstate(invalid='ignore'):
       nRejectedBG[np.where(nRejectedBG < 0)] = 0
 
-    # Desert boundary test 11
+    # Desert boundary test 11 (Giglio 2003)
     dbTest11 = np.zeros((nRows, nCols), dtype=np.int)
     with np.errstate(invalid='ignore'):
       dbTest11[np.where(nRejectedBG > (0.1 * nValid))] = 1
 
-    # Desert boundary test 12
+    # Desert boundary test 12 (Giglio 2003)
     dbTest12 = np.zeros((nRows, nCols), dtype=np.int)
     with np.errstate(invalid='ignore'):
       dbTest12[(nRejectedBG >= 4)] = 1
 
-    # Desert boundary test 13
+    # Desert boundary test 13 (Giglio 2003)
     dbTest13 = np.zeros((nRows, nCols), dtype=np.int)
     with np.errstate(invalid='ignore'):
       dbTest13[np.where(allArrays['BAND2x1k'] > 150)] = 1
 
-    # Desert boundary test 14
+    # Desert boundary test 14 (Giglio 2003)
     dbTest14 = np.zeros((nRows, nCols), dtype=np.int)
     with np.errstate(invalid='ignore'):
       dbTest14[(b22rejMeanFilt < 345)] = 1
 
-    # Desert boundary test 15
+    # Desert boundary test 15 (Giglio 2003)
     dbTest15 = np.zeros((nRows, nCols), dtype=np.int)
     with np.errstate(invalid='ignore'):
       dbTest15[(b22rejMADfilt < 3)] = 1
 
-    # Desert boundary test 16
+    # Desert boundary test 16 (Giglio 2003)
     dbTest16 = np.zeros((nRows, nCols), dtype=np.int)
     with np.errstate(invalid='ignore'):
       dbTest16[(b22CloudWaterMasked < (b22rejMeanFilt + (6 * b22rejMADfilt)))] = 1
@@ -796,7 +840,7 @@ def process(filMOD02):
     # Reject anything that fulfills desert boundary criteria
     dbAll = dbTest11 * dbTest12 * dbTest13 * dbTest14 * dbTest15 * dbTest16
 
-    # Coastal false alarm rejection
+    # Coastal false alarm rejection (Giglio 2003, Section 2.2.8)
     with np.errstate(invalid='ignore'):
       ndvi = (allArrays['BAND2x1k'] + allArrays['BAND1x1k']) / (allArrays['BAND2x1k'] + allArrays['BAND1x1k'])
     unmaskedWater = np.zeros((nRows, nCols), dtype=np.int)
@@ -813,6 +857,7 @@ def process(filMOD02):
     with np.errstate(invalid='ignore'):  # Reject sun glint, desert boundary, coastal false alarms
       allFires[(sgAll == 1) | (dbAll == 1) | (rejUnmaskedWater == 1)] = 0
 
+    # If any fires have been detected, calculate Fire Radiative Power (FRP)
     if np.max(allFires) > 0:
       datsWdata.append(t)
 
@@ -826,7 +871,7 @@ def process(filMOD02):
 
       frpMWabs = frpMW * potFire
 
-      # Detection confidence
+      # Detection confidence (Giglio 2003, Section 2.3)
       cloudLoc = np.zeros((nRows, nCols), dtype=np.int)
       with np.errstate(invalid='ignore'):
         cloudLoc[np.where(cloudMask == cloudFlag)] = 1
@@ -861,10 +906,10 @@ def process(filMOD02):
       # Fire detection confidence test 21
       C3 = rampFn(firesZdeltaT, 3, 6)
 
-      # Fire detection confidence test 22
-      C4 = 1 - rampFn(firesNclouds, 0, 6)
+      # Fire detection confidence test 22 - not used for night fires
+      C4 = 1 - rampFn(firesNclouds, 0, 6) # zero adjacent clouds = zero confidence
 
-      # Fire detection confidence test 23
+      # Fire detection confidence test 23 - not used for night fires
       C5 = 1 - rampFn(firesNwater, 0, 6)
 
       confArrayDay = np.row_stack((C1day, C2, C3, C4, C5))
