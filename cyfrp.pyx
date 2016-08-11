@@ -84,7 +84,7 @@ cdef nUnmaskedWaterFilt(kernel, int kSize, int minKsize, int maxKsize):
 
 cdef rampFn(band, rampMin, rampMax):
 
-  conf = 0
+  cdef float conf = 0
   confVals = []
   for bandVal in band:
     if rampMin < bandVal < rampMax:
