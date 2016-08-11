@@ -132,7 +132,7 @@ args = parser.parse_args()
 if (args.order):
   [hdf_ftp.main(order, args.downloadLimit, args.verbose) for order in args.order]
 
-# FRP argument validation
+# Argument validation
 if args.minimumLatitude < MIN_MIN_LAT:
   args.minimumLatitude = MIN_MIN_LAT
   if args.verbose:
@@ -141,7 +141,6 @@ elif args.minimumLatitude > MAX_MIN_LAT:
   args.minimumLatitude = MAX_MIN_LAT
   if args.verbose:
     print("Lowering minimum latitude to upper bound", MAX_MIN_LAT)
-minLat = args.minimumLatitude
 
 if args.maximumLatitude < MIN_MAX_LAT:
   args.maximumLatitude = MIN_MAX_LAT
@@ -151,7 +150,6 @@ elif args.maximumLatitude > MAX_MAX_LAT:
   args.maximumLatitude = MAX_MAX_LAT
   if args.verbose:
     print("Lowering maximum latitude to upper bound", MAX_MAX_LAT)
-maxLat = args.maximumLatitude
 
 if args.minimumLongitude < MIN_MIN_LON:
   args.minimumLongitude = MIN_MIN_LON
@@ -161,7 +159,6 @@ elif args.minimumLongitude > MAX_MIN_LON:
   args.minimumLongitude = MAX_MIN_LON
   if args.verbose:
     print("Lowering minimum longitude to upper bound", MAX_MIN_LON)
-minLon = args.minimumLongitude
 
 if args.maximumLongitude < MIN_MAX_LON:
   args.maximumLongitude = MIN_MAX_LON
@@ -171,7 +168,6 @@ elif args.maximumLongitude > MAX_MAX_LON:
   args.maximumLongitude = MAX_MAX_LON
   if args.verbose:
     print("Lowering maximum longitude to upper bound", MAX_MAX_LON)
-maxLon = args.maximumLongitude
 
 if args.reductionFactor < MIN_RED_FAC:
   args.reductionFactor = MIN_RED_FAC
@@ -181,7 +177,6 @@ elif args.reductionFactor > MAX_RED_FAC:
   args.reductionFactor = MAX_RED_FAC
   if args.verbose:
     print("Lowering reduction factor to upper bound", MAX_RED_FAC)
-reductionFactor = args.reductionFactor
 
 if args.minimumKernel < MIN_MIN_KER:
   args.minimumKernel = MIN_MIN_KER
@@ -191,7 +186,6 @@ if args.minimumKernel > MAX_MIN_KER:
   args.minimumKernel = MAX_MIN_KER
   if args.verbose:
     print("Lowering minimum kernel size to upper bound", MAX_MIN_KER)
-minKsize = args.minimumKernel
 
 if args.maximumKernel < MIN_MAX_KER:
   args.maximumKernel = MIN_MAX_KER
@@ -201,7 +195,6 @@ if args.maximumKernel > MAX_MAX_KER:
   args.maximumKernel = MAX_MAX_KER
   if args.verbose:
     print("Lowering maximum kernel size to upper bound", MAX_MAX_KER)
-maxKsize = args.maximumKernel
 
 if args.windowObservations < MIN_WIN_OBV:
   args.windowObservations = MIN_WIN_OBV
@@ -211,7 +204,6 @@ elif args.windowObservations > MAX_WIN_OBV:
   args.windowObservations = MAX_WIN_OBV
   if args.verbose:
     print("Lowering window observation count to upper bound", MAX_WIN_OBV)
-minNcount = args.windowObservations
 
 if args.validFraction < MIN_VLD_FRC:
   args.validFraction = MIN_VLD_FRC
@@ -221,7 +213,6 @@ elif args.validFraction > MAX_VLD_FRC:
   args.validFraction = MAX_VLD_FRC
   if args.verbose:
     print("Lowering valid fraction of observations to upper bound", MAX_VLD_FRC)
-minNfrac = args.validFraction
 
 if args.decimal < MIN_DEC_PLC:
   args.decimal = MIN_DEC_PLC
@@ -231,44 +222,19 @@ elif args.decimal > MAX_DEC_PLC:
   args.decimal = MAX_DEC_PLC
   if args.verbose:
     print("Lowering decimal output to upper bound", MAX_DEC_PLC)
-decimal = args.decimal
 
 # Verbose output configured settings
 if args.verbose:
-  print("Minimum latitude set to", minLat)
-  print("Maximum latitude set to", maxLat)
-  print("Minimum longitude set to", minLon)
-  print("Maximum longitude set to", maxLon)
-  print("Reduction factor set to", reductionFactor)
-  print("Minimum kernel size set to", minKsize)
-  print("Maximum kernel size set to", maxKsize)
-  print("Window observation count set to", minNcount)
-  print("Valid fraction of observations set to", minNfrac)
-  print("Decimal output set to", decimal)
-
-# Value at which Band 22 saturates (L. Giglio, personal communication)
-b22saturationVal = 331
-increaseFactor = 1 + (1 - reductionFactor)
-waterFlag = -1
-cloudFlag = -2
-bgFlag = -3
-resolution = 5
-datsWdata = []
-
-# Coefficients for radiance calculations
-coeff1 = 119104200
-coeff2 = 14387.752
-lambda21and22 = 3.959
-lambda31 = 11.009
-lambda32 = 12.02
-
-# Layers for reading in HDF files
-layersMOD02 = ['EV_1KM_Emissive', 'EV_250_Aggr1km_RefSB', 'EV_500_Aggr1km_RefSB']
-layersMOD03 = ['Land/SeaMask', 'Latitude', 'Longitude', 'SolarAzimuth', 'SolarZenith', 'SensorAzimuth', 'SensorZenith']
-
-# HDFs
-HDF03 = [hdf for hdf in os.listdir('.') if ".hdf" in hdf and "D03" in hdf]
-HDF02 = [hdf for hdf in os.listdir('.') if ".hdf" in hdf and "D02" in hdf]
+  print("Minimum latitude set to", args.minimumLatitude)
+  print("Maximum latitude set to", args.maximumLatitude)
+  print("Minimum longitude set to", args.minimumLongitude)
+  print("Maximum longitude set to", args.maximumLongitude)
+  print("Reduction factor set to", args.reductionFactor)
+  print("Minimum kernel size set to", args.minimumKernel)
+  print("Maximum kernel size set to", args.maximumKernel)
+  print("Window observation count set to", args.windowObservations)
+  print("Valid fraction of observations set to", args.validFraction)
+  print("Decimal output set to", args.decimal)
 
 #
 # Finds the number of adjacent cloud pixels
@@ -399,7 +365,7 @@ def runFilt(band, filtFunc, minKsize, maxKsize):
 # Calculates mean and mean absolute deviation (MAD) of neighboring pixels in a given band
 # Is used when both mean and MAD is required
 #
-def meanMadFilt(rawband, minKsize, maxKsize, footprintx, footprinty, ksizes):
+def meanMadFilt(rawband, minKsize, maxKsize, footprintx, footprinty, ksizes, minNcount, minNfrac):
 
   sizex, sizey = np.shape(rawband)
   bSize = (maxKsize - 1) / 2
@@ -447,7 +413,39 @@ def meanMadFilt(rawband, minKsize, maxKsize, footprintx, footprinty, ksizes):
 
   return meanFilt[bSize:-bSize, bSize:-bSize], madFilt[bSize:-bSize, bSize:-bSize]
 
-def process(filMOD02):
+def process(filMOD02, commandLineArgs):
+
+  minNfrac = commandLineArgs.validFraction
+  decimal = commandLineArgs.decimal
+  minNcount = commandLineArgs.windowObservations
+  maxKsize = commandLineArgs.maximumKernel
+  minKsize = commandLineArgs.minimumKernel
+  reductionFactor = commandLineArgs.reductionFactor
+  maxLon = commandLineArgs.maximumLongitude
+  minLon = commandLineArgs.minimumLongitude
+  maxLat = commandLineArgs.maximumLatitude
+  minLat = commandLineArgs.minimumLatitude
+
+  # Value at which Band 22 saturates (L. Giglio, personal communication)
+  b22saturationVal = 331
+  increaseFactor = 1 + (1 - reductionFactor)
+  waterFlag = -1
+  cloudFlag = -2
+  bgFlag = -3
+  resolution = 5
+  datsWdata = []
+
+  # Coefficients for radiance calculations
+  coeff1 = 119104200
+  coeff2 = 14387.752
+  lambda21and22 = 3.959
+  lambda31 = 11.009
+  lambda32 = 12.02
+
+  # Layers for reading in HDF files
+  layersMOD02 = ['EV_1KM_Emissive', 'EV_250_Aggr1km_RefSB', 'EV_500_Aggr1km_RefSB']
+  layersMOD03 = ['Land/SeaMask', 'Latitude', 'Longitude', 'SolarAzimuth', 'SolarZenith', 'SensorAzimuth',
+                 'SensorZenith']
 
   # meanMadFilt
   footprintx = []
@@ -698,14 +696,14 @@ def process(filMOD02):
     deltaTbgMask[np.where(bgMask == bgFlag)] = bgFlag
 
     # Mean and mad filters - mad needed for confidence estimation
-    b22meanFilt, b22MADfilt = meanMadFilt(b22bgMask, maxKsize, minKsize, footprintx, footprinty, ksizes)
+    b22meanFilt, b22MADfilt = meanMadFilt(b22bgMask, maxKsize, minKsize, footprintx, footprinty, ksizes, minNcount, minNfrac)
     b22minusBG = np.copy(b22CloudWaterMasked) - np.copy(b22meanFilt)
-    b31meanFilt, b31MADfilt = meanMadFilt(b31bgMask, maxKsize, minKsize, footprintx, footprinty, ksizes)
-    deltaTmeanFilt, deltaTMADFilt = meanMadFilt(deltaTbgMask, maxKsize, minKsize, footprintx, footprinty, ksizes)
+    b31meanFilt, b31MADfilt = meanMadFilt(b31bgMask, maxKsize, minKsize, footprintx, footprinty, ksizes, minNcount, minNfrac)
+    deltaTmeanFilt, deltaTMADFilt = meanMadFilt(deltaTbgMask, maxKsize, minKsize, footprintx, footprinty, ksizes, minNcount, minNfrac)
 
     b22bgRej = np.copy(allArrays['BAND22'])
     b22bgRej[np.where(bgMask != bgFlag)] = bgFlag
-    b22rejMeanFilt, b22rejMADfilt = meanMadFilt(b22bgRej, maxKsize, minKsize, footprintx, footprinty, ksizes)
+    b22rejMeanFilt, b22rejMADfilt = meanMadFilt(b22bgRej, maxKsize, minKsize, footprintx, footprinty, ksizes, minNcount, minNfrac)
 
     # Potential fire test (Giglio 2016, Section 3.3)
     potFire = np.zeros((nRows, nCols), dtype=np.int)
@@ -952,7 +950,10 @@ def process(filMOD02):
       hdr = '"FRPline","FRPsample","FRPlats","FRPlons","FRPT21","FRPT31","FRPMeanT21","FRPMeanT31","FRPMeanDT","FRPMADT21","FRPMADT31","FRP_MAD_DT","FRPpower","FRP_AdjCloud","FRP_AdjWater","FRP_NumValid","FRP_confidence"'
       np.savetxt(filMOD02.replace('hdf', '') + "csv", exportCSV, delimiter="\t\t", header=hdr, fmt="%." + str(decimal) + "f")
 
-map(process, HDF02)
+# HDFs
+HDF03 = [hdf for hdf in os.listdir('.') if ".hdf" in hdf and "D03" in hdf]
+HDF02 = [hdf for hdf in os.listdir('.') if ".hdf" in hdf and "D02" in hdf]
+[process(hdf02, args) for hdf02 in HDF02]
 
 # End time
 end = time.time()
