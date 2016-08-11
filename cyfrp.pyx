@@ -695,6 +695,7 @@ cdef process(filMOD02, HDF03, float minLat, float maxLat, float minLon, float ma
 
 def run(target, minLat, maxLat, minLon, maxLon, reductionFactor, minNcount, minNfrac, minKsize, maxKsize, decimalPlaces):
 
+  os.chdir('/scratch/borealfire/tmp')
   HDF03 = [hdf for hdf in os.listdir('.') if ".hdf" in hdf and "D03" in hdf]
   HDF02 = [hdf for hdf in os.listdir('.') if ".hdf" in hdf and "D02" in hdf]
   [process(hdf, HDF03, minLat, maxLat, minLon, maxLon, reductionFactor, minNcount, minNfrac, minKsize, maxKsize, decimalPlaces) for hdf in HDF02]
