@@ -712,37 +712,35 @@ def process(filMOD02, commandLineArgs):
         allArrays['BAND2x1k'] < (300 * increaseFactor))] = 1
       potFire[(dayFlag == 0) & (allArrays['BAND22'] > (305 * reductionFactor)) & (deltaT > (10 * reductionFactor))] = 1
 
-    # Absolute threshold test for removing sun glint (Kaufman et al. 1998)
+    # CONTEXT TESTS - (Giglio 2016, Section 3.5)
+    # The number associated with each test is the number of the equation in the paper
+
+    # Absolute threshold test 1 [not contextual]
     absValTest = np.zeros((nRows, nCols), dtype=np.int)
     with np.errstate(invalid='ignore'):
       absValTest[(dayFlag == 1) & (allArrays['BAND22'] > (360 * reductionFactor))] = 1
       absValTest[(dayFlag == 0) & (allArrays['BAND22'] > (305 * reductionFactor))] = 1
 
-    # Context tests - (Giglio 2016, Section 3.5)
-    #
-    # The number associated with each test is the number of the equation in the paper
-    #
-
-    # Context fire test 2
+    # Context fire test 2 (Giglio 2016, Section 3.5)
     deltaTMADfire = np.zeros((nRows, nCols), dtype=np.int)
     with np.errstate(invalid='ignore'):
       deltaTMADfire[deltaT > (deltaTmeanFilt + (3.5 * deltaTMADFilt))] = 1
 
-    # Context fire test 3
+    # Context fire test 3 (Giglio 2016, Section 3.5)
     deltaTfire = np.zeros((nRows, nCols), dtype=np.int)
     with np.errstate(invalid='ignore'):
       deltaTfire[np.where(deltaT > (deltaTmeanFilt + 6))] = 1
 
-    # Context fire test 4
+    # Context fire test 4 (Giglio 2016, Section 3.5)
     B22fire = np.zeros((nRows, nCols), dtype=np.int)
     with np.errstate(invalid='ignore'):
       B22fire[(b22CloudWaterMasked > (b22meanFilt + (3 * b22MADfilt)))] = 1
 
-    # Context fire test 5
+    # Context fire test 5 (Giglio 2016, Section 3.5)
     B31fire = np.zeros((nRows, nCols), dtype=np.int)
     B31fire[(b31CloudWaterMasked > (b31meanFilt + b31MADfilt - 4))] = 1
 
-    # Context fire test 6
+    # Context fire test 6 (Giglio 2016, Section 3.5)
     B22rejFire = np.zeros((nRows, nCols), dtype=np.int)
 
     with np.errstate(invalid='ignore'):
@@ -760,30 +758,30 @@ def process(filMOD02, commandLineArgs):
     with np.errstate(invalid='ignore'):
       dayFires[(dayFlag == 1) & ((absValTest == 1) | (fireLocTentativeDay == 1))] = 1
 
-    # Nighttime definite fire tests
+    # Nighttime definite fire tests (Giglio 2016, Section 3.5)
     nightFires = np.zeros((nRows, nCols), dtype=np.int)
     with np.errstate(invalid='ignore'):
       nightFires[((dayFlag == 0) & ((fireLocTentative == 1) | absValTest == 1))] = 1
 
-    # Sun glint rejection 7 (Giglio 2003)
+    # Sun glint rejection 7 (Giglio 2003, section 3.6.1)
     relAzimuth = allArrays['SensorAzimuth'] - allArrays['SolarAzimuth']
     cosThetaG = (np.cos(allArrays['SensorZenith']) * np.cos(allArrays['SolarZenith'])) - (
       np.sin(allArrays['SensorZenith']) * np.sin(allArrays['SolarZenith']) * np.cos(relAzimuth))
     thetaG = np.arccos(cosThetaG)
     thetaG = (thetaG / 3.141592) * 180
 
-    # Sun glint test 8 (Giglio 2016)
+    # Sun glint test 7 (Giglio 2016, section 3.6.1)
+    sgTest7 = np.zeros((nRows, nCols), dtype=np.int)
+    with np.errstate(invalid='ignore'):
+      sgTest7[np.where(thetaG < 2)] = 1
+
+    # Sun glint test 8 (Giglio 2016, section 3.6.1)
     sgTest8 = np.zeros((nRows, nCols), dtype=np.int)
     with np.errstate(invalid='ignore'):
-      sgTest8[np.where(thetaG < 2)] = 1
-
-    # Sun glint test 9 (Giglio 2016)
-    sgTest9 = np.zeros((nRows, nCols), dtype=np.int)
-    with np.errstate(invalid='ignore'):
-      sgTest9[np.where((thetaG < 8) & (allArrays['BAND1x1k'] > 100) & (allArrays['BAND2x1k'] > 200) & (
+      sgTest8[np.where((thetaG < 8) & (allArrays['BAND1x1k'] > 100) & (allArrays['BAND2x1k'] > 200) & (
         allArrays['BAND7x1k'] > 120))] = 1
 
-    # Sun glint test 10
+    # Sun glint test 9 (Giglio 2016, section 3.6.1)
     waterLoc = np.zeros((nRows, nCols), dtype=np.int)
     with np.errstate(invalid='ignore'):
       waterLoc[np.where(waterMask == waterFlag)] = 1
@@ -792,15 +790,15 @@ def process(filMOD02, commandLineArgs):
     with np.errstate(invalid='ignore'):
       nRejectedWater[np.where(nRejectedWater < 0)] = 0
 
-    sgTest10 = np.zeros((nRows, nCols), dtype=np.int)
+    sgTest9 = np.zeros((nRows, nCols), dtype=np.int)
     with np.errstate(invalid='ignore'):
-      sgTest10[np.where((thetaG < 12) & ((nWaterAdj + nRejectedWater) > 0))] = 1
+      sgTest9[np.where((thetaG < 12) & ((nWaterAdj + nRejectedWater) > 0))] = 1
 
     sgAll = np.zeros((nRows, nCols), dtype=np.int)
     with np.errstate(invalid='ignore'):
-      sgAll[(sgTest8 == 1) | (sgTest9 == 1) | (sgTest10 == 1)] = 1
+      sgAll[(sgTest7 == 1) | (sgTest8 == 1) | (sgTest9 == 1)] = 1
 
-    # Desert boundary rejection
+    # Desert boundary rejection (Giglio 2003, section 2.2.7)
     nValid = runFilt(b22bgMask, nValidFilt, minKsize, maxKsize)
     nRejectedBG = runFilt(bgMask, nRejectBGfireFilt, minKsize, maxKsize)
 
