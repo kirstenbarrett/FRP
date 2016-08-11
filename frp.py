@@ -677,6 +677,7 @@ def process(filMOD02):
     # After all the data has been read
     bgMask = np.zeros((nRows, nCols), dtype=np.int)
 
+    # Background fire test (Gilio 2003, Section 2.2.3, first paragraph)
     with np.errstate(invalid='ignore'):
       bgMask[np.where(
         (dayFlag == 1) & (allArrays['BAND22'] > (325 * reductionFactor)) & (deltaT > (20 * reductionFactor)))] = bgFlag
