@@ -9,13 +9,6 @@ from scipy.stats import gmean
 import math
 cimport numpy as np
 
-# TODO
-#
-# Optimise rampFn (we cannot use float/int as this invalidates the dataset)\
-# Optimise runFilt
-# Optimise meanMadFilt, figure out nmin type (int or float arithmetic)\
-# Test the program on a large dataset (get it working from .scrath/borealfire)
-
 cdef adjCloud(kernel):
 
   nghbors = kernel[range(0, 4) + range(5, 9)]
@@ -101,10 +94,10 @@ cdef rampFn(band, rampMin, rampMax):
     confVals.append(conf)
   return np.asarray(confVals)
 
-cdef runFilt(band, filtFunc, minKsize, maxKsize):
+cdef runFilt(band, filtFunc, int minKsize, int maxKsize):
 
   filtBand = band
-  kSize = minKsize
+  cdef int kSize = minKsize
   bandFilts = {}
 
   while kSize <= maxKsize:
@@ -122,6 +115,7 @@ cdef runFilt(band, filtFunc, minKsize, maxKsize):
 
   return bandFilt
 
+#TODO
 cdef meanMadFilt(np.ndarray[np.float64_t, ndim=2] rawband, int minKsize, int maxKsize, minNcount, minNfrac, footprintx, footprinty, ksizes):
 
     cdef int sizex, sizey, bSize, padsizex, padsizey, i, x, y, nmin, nn
