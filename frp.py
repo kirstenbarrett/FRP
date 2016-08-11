@@ -270,29 +270,6 @@ layersMOD03 = ['Land/SeaMask', 'Latitude', 'Longitude', 'SolarAzimuth', 'SolarZe
 HDF03 = [hdf for hdf in os.listdir('.') if ".hdf" in hdf and "D03" in hdf]
 HDF02 = [hdf for hdf in os.listdir('.') if ".hdf" in hdf and "D02" in hdf]
 
-# Required by meanMadFilt TODO should this be here in global scope?
-footprintx = []
-footprinty = []
-Ncount = []
-ksizes = []
-for s in range(minKsize, maxKsize+2,2):
-    halfSize = (s-1)/2
-    xlist = []
-    ylist = []
-    for x in range(-halfSize,halfSize+1):
-        for y in range(-halfSize,halfSize+1):
-            if x is 0:
-                if abs(y)>1:
-                    xlist.append(x)
-                    ylist.append(y)
-            else:
-                xlist.append(x)
-                ylist.append(y)
-    footprintx.append(np.array(xlist))
-    footprinty.append(np.array(ylist))
-    Ncount.append(len(xlist))
-    ksizes.append(s)
-
 #
 # Finds the number of adjacent cloud pixels
 #
@@ -422,7 +399,8 @@ def runFilt(band, filtFunc, minKsize, maxKsize):
 # Calculates mean and mean absolute deviation (MAD) of neighboring pixels in a given band
 # Is used when both mean and MAD is required
 #
-def meanMadFilt(rawband, minKsize, maxKsize):
+def meanMadFilt(rawband, minKsize, maxKsize, footprintx, footprinty, ksizes):
+
   sizex, sizey = np.shape(rawband)
   bSize = (maxKsize - 1) / 2
   padsizex = sizex + 2 * bSize
@@ -470,6 +448,29 @@ def meanMadFilt(rawband, minKsize, maxKsize):
   return meanFilt[bSize:-bSize, bSize:-bSize], madFilt[bSize:-bSize, bSize:-bSize]
 
 def process(filMOD02):
+
+  # meanMadFilt
+  footprintx = []
+  footprinty = []
+  Ncount = []
+  ksizes = []
+  for s in range(minKsize, maxKsize + 2, 2):
+    halfSize = (s - 1) / 2
+    xlist = []
+    ylist = []
+    for x in range(-halfSize, halfSize + 1):
+      for y in range(-halfSize, halfSize + 1):
+        if x is 0:
+          if abs(y) > 1:
+            xlist.append(x)
+            ylist.append(y)
+        else:
+          xlist.append(x)
+          ylist.append(y)
+    footprintx.append(np.array(xlist))
+    footprinty.append(np.array(ylist))
+    Ncount.append(len(xlist))
+    ksizes.append(s)
 
   filSplt = filMOD02.split('.')
   datTim = filSplt[1].replace('A', '') + filSplt[2]
@@ -697,14 +698,14 @@ def process(filMOD02):
     deltaTbgMask[np.where(bgMask == bgFlag)] = bgFlag
 
     # Mean and mad filters - mad needed for confidence estimation
-    b22meanFilt, b22MADfilt = meanMadFilt(b22bgMask, maxKsize, minKsize)
+    b22meanFilt, b22MADfilt = meanMadFilt(b22bgMask, maxKsize, minKsize, footprintx, footprinty, ksizes)
     b22minusBG = np.copy(b22CloudWaterMasked) - np.copy(b22meanFilt)
-    b31meanFilt, b31MADfilt = meanMadFilt(b31bgMask, maxKsize, minKsize)
-    deltaTmeanFilt, deltaTMADFilt = meanMadFilt(deltaTbgMask, maxKsize, minKsize)
+    b31meanFilt, b31MADfilt = meanMadFilt(b31bgMask, maxKsize, minKsize, footprintx, footprinty, ksizes)
+    deltaTmeanFilt, deltaTMADFilt = meanMadFilt(deltaTbgMask, maxKsize, minKsize, footprintx, footprinty, ksizes)
 
     b22bgRej = np.copy(allArrays['BAND22'])
     b22bgRej[np.where(bgMask != bgFlag)] = bgFlag
-    b22rejMeanFilt, b22rejMADfilt = meanMadFilt(b22bgRej, maxKsize, minKsize)
+    b22rejMeanFilt, b22rejMADfilt = meanMadFilt(b22bgRej, maxKsize, minKsize, footprintx, footprinty, ksizes)
 
     # Potential fire test (Giglio 2016, Section 3.3)
     potFire = np.zeros((nRows, nCols), dtype=np.int)
