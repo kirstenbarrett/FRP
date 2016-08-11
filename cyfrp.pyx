@@ -89,7 +89,7 @@ cdef nUnmaskedWaterFilt(kernel, int kSize, int minKsize, int maxKsize):
 
   return nUnmaskedWater
 
-def rampFn(band, rampMin, rampMax):
+cdef rampFn(band, rampMin, rampMax):
 
   conf = 0
   confVals = []
@@ -101,7 +101,7 @@ def rampFn(band, rampMin, rampMax):
     confVals.append(conf)
   return np.asarray(confVals)
 
-def runFilt(band, filtFunc, minKsize, maxKsize):
+cdef runFilt(band, filtFunc, minKsize, maxKsize):
 
   filtBand = band
   kSize = minKsize
@@ -122,7 +122,7 @@ def runFilt(band, filtFunc, minKsize, maxKsize):
 
   return bandFilt
 
-def meanMadFilt(np.ndarray[np.float64_t, ndim=2] rawband, int minKsize, int maxKsize, minNcount, minNfrac, footprintx, footprinty, ksizes):
+cdef meanMadFilt(np.ndarray[np.float64_t, ndim=2] rawband, int minKsize, int maxKsize, minNcount, minNfrac, footprintx, footprinty, ksizes):
 
     cdef int sizex, sizey, bSize, padsizex, padsizey, i, x, y, nmin, nn
     cdef float centerVal, bgMean
