@@ -115,8 +115,7 @@ cdef runFilt(band, filtFunc, int minKsize, int maxKsize):
 
   return bandFilt
 
-#TODO
-cdef meanMadFilt(np.ndarray[np.float64_t, ndim=2] rawband, int minKsize, int maxKsize, minNcount, minNfrac, footprintx, footprinty, ksizes):
+cdef meanMadFilt(np.ndarray[np.float64_t, ndim=2] rawband, int minKsize, int maxKsize, minNcount, float minNfrac, footprintx, footprinty, ksizes):
 
     cdef int sizex, sizey, bSize, padsizex, padsizey, i, x, y, nmin, nn
     cdef float centerVal, bgMean
