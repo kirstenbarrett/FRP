@@ -452,8 +452,7 @@ def process(filMOD02, commandLineArgs, cwd):
 
   # Layers for reading in HDF files
   layersMOD02 = ['EV_1KM_Emissive', 'EV_250_Aggr1km_RefSB', 'EV_500_Aggr1km_RefSB']
-  layersMOD03 = ['Land/SeaMask', 'Latitude', 'Longitude', 'SolarAzimuth', 'SolarZenith', 'SensorAzimuth',
-                 'SensorZenith']
+  layersMOD03 = ['Land/SeaMask', 'Latitude', 'Longitude', 'SolarAzimuth', 'SolarZenith', 'SensorAzimuth', 'SensorZenith']
 
   # meanMadFilt
   footprintx = []
@@ -478,6 +477,7 @@ def process(filMOD02, commandLineArgs, cwd):
     Ncount.append(len(xlist))
     ksizes.append(s)
 
+  # Parse the HDF02
   filSplt = filMOD02.split('.')
   datTim = filSplt[1].replace('A', '') + filSplt[2]
   t = datetime.datetime.strptime(datTim, "%Y%j%H%M")
@@ -628,8 +628,10 @@ def process(filMOD02, commandLineArgs, cwd):
   # Clip area to bounding co-ordinates
   boundCrds = np.where((minLat < fullArrays['LAT']) & (fullArrays['LAT'] < maxLat) & (fullArrays['LON'] < maxLon) & (
     minLon < fullArrays['LON']))
+
   if np.size(boundCrds) > 0 and (np.min(boundCrds[0]) != np.max(boundCrds[0])) and (
         np.min(boundCrds[1]) != np.max(boundCrds[1])):
+
     boundCrds0 = boundCrds[0]
     boundCrds1 = boundCrds[1]
     min0 = np.min(boundCrds0)
@@ -865,6 +867,7 @@ def process(filMOD02, commandLineArgs, cwd):
 
     # If any fires have been detected, calculate Fire Radiative Power (FRP)
     if np.max(allFires) > 0:
+      
       datsWdata.append(t)
 
       b22firesAllMask = allFires * allArrays['BAND22']
