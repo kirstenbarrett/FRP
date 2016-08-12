@@ -170,7 +170,7 @@ cdef meanMadFilt(np.ndarray[np.float64_t, ndim=2] rawband, int minKsize, int max
 
     return meanFilt[bSize:-bSize,bSize:-bSize], madFilt[bSize:-bSize,bSize:-bSize]
 
-cdef process(filMOD02, HDF03, float minLat, float maxLat, float minLon, float maxLon, int reductionFactor, int minNcount, float minNfrac, int minKsize, int maxKsize, int decimalPlaces):
+cdef process(filMOD02, HDF03, float minLat, float maxLat, float minLon, float maxLon, int reductionFactor, int minNcount, float minNfrac, int minKsize, int maxKsize, int decimalPlaces, str cwd):
 
   cdef np.ndarray[np.float64_t, ndim=2] dayFlag,waterMask,cloudMask
   cdef np.ndarray[np.float64_t, ndim=2] b21CloudWaterMasked,b22CloudWaterMasked
@@ -251,6 +251,7 @@ cdef process(filMOD02, HDF03, float minLat, float maxLat, float minLon, float ma
 
     file_template = 'HDF4_EOS:EOS_SWATH:%s:MODIS_SWATH_Type_L1B:%s'
     this_file = file_template % (filMOD02, layer)
+
     g = gdal.Open(this_file)
     if g is None:
       raise IOError
@@ -399,7 +400,7 @@ cdef process(filMOD02, HDF03, float minLat, float maxLat, float minLon, float ma
     waterMask = np.zeros((nRows, nCols), dtype=np.float64)
     waterMask[np.where(allArrays['LANDMASK'] != 1)] = waterFlag
 
-    # Crate cloud mask
+    # Create cloud mask
     cloudMask = np.zeros((nRows, nCols), dtype=np.float64)
     cloudMask[((allArrays['BAND1x1k'] + allArrays['BAND2x1k']) > 900)] = cloudFlag
     cloudMask[(allArrays['BAND32'] < 265)] = cloudFlag
@@ -690,13 +691,13 @@ cdef process(filMOD02, HDF03, float minLat, float maxLat, float minLon, float ma
          FRP_MAD_DT, FRPpower, FRP_AdjCloud, FRP_AdjWater, FRP_NumValid, FRP_confidence])
 
       hdr = '"FRPline","FRPsample","FRPlats","FRPlons","FRPT21","FRPT31","FRPMeanT21","FRPMeanT31","FRPMeanDT","FRPMADT21","FRPMADT31","FRP_MAD_DT","FRPpower","FRP_AdjCloud","FRP_AdjWater","FRP_NumValid","FRP_confidence"'
+      os.chdir(cwd)
       np.savetxt(filMOD02.replace('hdf', '') + "csv", exportCSV, delimiter="\t\t", header=hdr, fmt="%." + str(decimalPlaces) + "f")
 
-def run(target, minLat, maxLat, minLon, maxLon, reductionFactor, minNcount, minNfrac, minKsize, maxKsize, decimalPlaces):
+def run(directory, minLat, maxLat, minLon, maxLon, reductionFactor, minNcount, minNfrac, minKsize, maxKsize, decimalPlaces):
 
   cwd = os.getcwd()
-  os.chdir('/scratch/borealfire/tmp')
+  os.chdir(directory)
   HDF03 = [hdf for hdf in os.listdir('.') if ".hdf" in hdf and "D03" in hdf]
   HDF02 = [hdf for hdf in os.listdir('.') if ".hdf" in hdf and "D02" in hdf]
-  os.chdir(cwd)
-  [process(hdf, HDF03, minLat, maxLat, minLon, maxLon, reductionFactor, minNcount, minNfrac, minKsize, maxKsize, decimalPlaces) for hdf in HDF02]
+  [process(hdf, HDF03, minLat, maxLat, minLon, maxLon, reductionFactor, minNcount, minNfrac, minKsize, maxKsize, decimalPlaces, cwd) for hdf in HDF02]

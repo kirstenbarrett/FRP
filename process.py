@@ -7,9 +7,7 @@ import pstats
 import cProfile
 import time
 
-target = sys.argv[1]
-
-input = open(target + "/input.txt", "r")
+input = open("data/input.txt", "r")
 
 coords = input.readline()
 data = re.findall("\-?[0-9.]+", coords)
@@ -31,17 +29,19 @@ decimalPlaces = input.readline()
 
 doProfiling = input.readline()
 
+directory = input.readline()
+
 input.close()
 
 if (doProfiling.upper() == "FALSE"):
 
-  cyfrp.run(target, ay, by, ax, bx, reductionFactor, minNcount, minNfrac, minKsize, maxKsize, decimalPlaces)
+  cyfrp.run(directory, ay, by, ax, bx, reductionFactor, minNcount, minNfrac, minKsize, maxKsize, decimalPlaces)
 
 else:
 
   filename = 'profiles/{}'.format(time.strftime('%y%m%d%a.%H%M%S'))
 
-  runStr = 'cyfrp.run("' + target + '",' + str(ay) + ',' + str(by) + ',' + str(ax) + ',' + str(bx) + \
+  runStr = 'cyfrp.run("' + directory + '",' + str(ay) + ',' + str(by) + ',' + str(ax) + ',' + str(bx) + \
            ',' + reductionFactor + ',' + minNcount + ',' + minNfrac + ',' + minKsize + ',' + maxKsize + \
            ',' + decimalPlaces + ')'
 

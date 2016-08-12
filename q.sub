@@ -11,4 +11,4 @@ module load gdal
 
 cd $PBS_O_WORKDIR
 
-./process.py data
+./process.py

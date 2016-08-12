@@ -27,3 +27,7 @@ Specifies the amount of decimal places the output should be delivered as.
 ## line 7
 
 Specifies whether to enable profiling for the program or not. **TRUE** to enable and **FALSE** to disable.
+
+## line 8
+
+Specifies what subdirectory to load HDF files from
