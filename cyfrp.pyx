@@ -696,7 +696,7 @@ cdef process(filMOD02, HDF03, float minLat, float maxLat, float minLon, float ma
 def run(target, minLat, maxLat, minLon, maxLon, reductionFactor, minNcount, minNfrac, minKsize, maxKsize, decimalPlaces):
 
   cwd = os.getcwd()
-  os.chdir('/scratch/borealfire/shared/AK_M_D03_M_D021KM_2004_AMJJASO_006')
+  os.chdir('/scratch/borealfire/tmp')
   HDF03 = [hdf for hdf in os.listdir('.') if ".hdf" in hdf and "D03" in hdf]
   HDF02 = [hdf for hdf in os.listdir('.') if ".hdf" in hdf and "D02" in hdf]
   os.chdir(cwd)
