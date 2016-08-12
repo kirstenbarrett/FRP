@@ -413,6 +413,9 @@ def meanMadFilt(rawband, minKsize, maxKsize, footprintx, footprinty, ksizes, min
 
   return meanFilt[bSize:-bSize, bSize:-bSize], madFilt[bSize:-bSize, bSize:-bSize]
 
+#
+# Main function for processing HDFs
+#
 def process(filMOD02, commandLineArgs):
 
   minNfrac = commandLineArgs.validFraction
@@ -432,7 +435,6 @@ def process(filMOD02, commandLineArgs):
   waterFlag = -1
   cloudFlag = -2
   bgFlag = -3
-  resolution = 5
   datsWdata = []
 
   # Coefficients for radiance calculations
