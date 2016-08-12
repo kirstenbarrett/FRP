@@ -381,6 +381,8 @@ def meanMadFilt(rawband, minKsize, maxKsize, footprintx, footprinty, ksizes, min
   meanFilt = np.full([padsizex, padsizey], -4.0, dtype=np.float32)
   madFilt = np.full([padsizex, padsizey], -4.0, dtype=np.float32)
 
+  print meanFilt, madFilt
+
   divTable = 1.0 / np.arange(1, maxKsize * maxKsize, dtype=np.float64)
   divTable = np.insert(divTable, 0, 0)
 
@@ -659,7 +661,7 @@ def process(filMOD02, commandLineArgs, cwd):
     waterMask = np.zeros((nRows, nCols), dtype=np.int)
     waterMask[np.where(allArrays['LANDMASK'] != 1)] = waterFlag
 
-    # Crate cloud mask (Giglio, 2016 Section 3.2)
+    # Create cloud mask (Giglio, 2016 Section 3.2)
     cloudMask = np.zeros((nRows, nCols), dtype=np.int)
     cloudMask[((allArrays['BAND1x1k'] + allArrays['BAND2x1k']) > 900)] = cloudFlag
     cloudMask[(allArrays['BAND32'] < 265)] = cloudFlag
@@ -710,10 +712,25 @@ def process(filMOD02, commandLineArgs, cwd):
     b22minusBG = np.copy(b22CloudWaterMasked) - np.copy(b22meanFilt)
     b31meanFilt, b31MADfilt = meanMadFilt(b31bgMask, maxKsize, minKsize, footprintx, footprinty, ksizes, minNcount, minNfrac)
     deltaTmeanFilt, deltaTMADFilt = meanMadFilt(deltaTbgMask, maxKsize, minKsize, footprintx, footprinty, ksizes, minNcount, minNfrac)
-
     b22bgRej = np.copy(allArrays['BAND22'])
     b22bgRej[np.where(bgMask != bgFlag)] = bgFlag
     b22rejMeanFilt, b22rejMADfilt = meanMadFilt(b22bgRej, maxKsize, minKsize, footprintx, footprinty, ksizes, minNcount, minNfrac)
+
+    # A pixel has to be either water or land.
+    # In the background characterization, the centre pixel is compared to the mean or MAD of it's neighbors.
+    # Valid neighboring pixels must match the centre pixel (i.e., if the centre pixel is water, the neighboring pixels considered as background must also be water and vice versa).
+    np.set_printoptions(threshold=np.inf)
+
+    print b22meanFilt.shape
+    print b22MADfilt.shape
+    print b22minusBG.shape
+    print b31meanFilt.shape
+    print b31MADfilt.shape
+    print deltaTmeanFilt.shape
+    print deltaTMADFilt.shape
+    print b22bgRej.shape
+    print b22rejMeanFilt.shape
+    print b22rejMADfilt.shape
 
     # Potential fire test (Giglio 2016, Section 3.3)
     potFire = np.zeros((nRows, nCols), dtype=np.int)
