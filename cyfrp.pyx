@@ -186,7 +186,6 @@ cdef process(filMOD02, HDF03, float minLat, float maxLat, float minLon, float ma
   cdef float waterFlag = -1
   cdef float cloudFlag = -2
   cdef float bgFlag = -3
-  cdef float resolution = 5
   datsWdata = []
 
   # Coefficients for radiance calculations
