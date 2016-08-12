@@ -121,6 +121,11 @@ parser.add_argument(
   help="Set the decimal places in the output:" + str(DEF_DEC_PLC) + " min:" + str(MIN_DEC_PLC) + " max:" + str(MAX_DEC_PLC),
   default=DEF_DEC_PLC, type=float)
 
+parser.add_argument(
+  "-dir", "--directory",
+  help="Set the directory to load HDF files from",
+  default=".", type=str)
+
 # FTP arguments - these must mimic hdf_ftp argparse except for -v
 parser.add_argument("-order", help="the data order id", type=str, nargs='+')
 parser.add_argument("-dl", "--downloadLimit", help="limit the amount of HDF file pairs to download", default=0, type=int)
@@ -235,6 +240,7 @@ if args.verbose:
   print("Window observation count set to", args.windowObservations)
   print("Valid fraction of observations set to", args.validFraction)
   print("Decimal output set to", args.decimal)
+  print("HDF loading directory set to", args.directory)
 
 #
 # Finds the number of adjacent cloud pixels
@@ -416,7 +422,7 @@ def meanMadFilt(rawband, minKsize, maxKsize, footprintx, footprinty, ksizes, min
 #
 # Main function for processing HDFs
 #
-def process(filMOD02, commandLineArgs):
+def process(filMOD02, commandLineArgs, cwd):
 
   minNfrac = commandLineArgs.validFraction
   decimal = commandLineArgs.decimal
@@ -946,14 +952,16 @@ def process(filMOD02, commandLineArgs):
       exportCSV = np.column_stack(
         [FRPline, FRPsample, FRPlats, FRPlons, FRPT21, FRPT31, FRPMeanT21, FRPMeanT31, FRPMeanDT, FRPMADT21, FRPMADT31,
          FRP_MAD_DT, FRPpower, FRP_AdjCloud, FRP_AdjWater, FRP_NumValid, FRP_confidence])
-
       hdr = '"FRPline","FRPsample","FRPlats","FRPlons","FRPT21","FRPT31","FRPMeanT21","FRPMeanT31","FRPMeanDT","FRPMADT21","FRPMADT31","FRP_MAD_DT","FRPpower","FRP_AdjCloud","FRP_AdjWater","FRP_NumValid","FRP_confidence"'
+      os.chdir(cwd)
       np.savetxt(filMOD02.replace('hdf', '') + "csv", exportCSV, delimiter="\t\t", header=hdr, fmt="%." + str(decimal) + "f")
 
 # HDFs
+cwd = os.getcwd()
+os.chdir(args.directory)
 HDF03 = [hdf for hdf in os.listdir('.') if ".hdf" in hdf and "D03" in hdf]
 HDF02 = [hdf for hdf in os.listdir('.') if ".hdf" in hdf and "D02" in hdf]
-[process(hdf02, args) for hdf02 in HDF02]
+[process(hdf02, args, cwd) for hdf02 in HDF02]
 
 # End time
 end = time.time()
