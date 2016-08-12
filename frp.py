@@ -118,12 +118,12 @@ parser.add_argument(
 
 parser.add_argument(
   "-dec", "--decimal",
-  help="Set the decimal places in the output:" + str(DEF_DEC_PLC) + " min:" + str(MIN_DEC_PLC) + " max:" + str(MAX_DEC_PLC),
+  help="Set the decimal places in the output default:" + str(DEF_DEC_PLC) + " min:" + str(MIN_DEC_PLC) + " max:" + str(MAX_DEC_PLC),
   default=DEF_DEC_PLC, type=float)
 
 parser.add_argument(
   "-dir", "--directory",
-  help="Set the directory to load HDF files from",
+  help="Set the directory to load HDF files from default:/",
   default=".", type=str)
 
 # FTP arguments - these must mimic hdf_ftp argparse except for -v
