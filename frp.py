@@ -408,9 +408,11 @@ def meanMadFilt(waterMask, rawband, minKsize, maxKsize, footprintx, footprinty, 
           # Get all possible neighbours of the current window
           neighbours = band[x + footprintx[0], y + footprinty[0]]
 
-          # Remove neighbours which do not correspond to identical values in the waterMask regarding the centerWaterVal
+          # Remove neighbours which correspond to a value in the water mask which is not equal to the water mask centre value
           waterBandNeighbours = waterBand[x + footprintx[0], y + footprinty[0]]
           neighbours = neighbours[np.where(waterBandNeighbours == centerWaterVal)]
+
+          neighbours = neighbours[np.where(neighbours > 0)]
 
           nn = len(neighbours)
 
@@ -442,9 +444,11 @@ def meanMadFilt(waterMask, rawband, minKsize, maxKsize, footprintx, footprinty, 
             # Get all possible neighbours of the current window
             neighbours = band[x + footprintx[0], y + footprinty[0]]
 
-            # Remove neighbours which do not correspond to identical values in the waterMask regarding the centerWaterVal
+            # Remove neighbours which correspond to a value in the water mask which is not equal to the water mask centre value
             waterBandNeighbours = waterBand[x + footprintx[0], y + footprinty[0]]
             neighbours = neighbours[np.where(waterBandNeighbours == centerWaterVal)]
+
+            neighbours = neighbours[np.where(neighbours > 0)]
 
             nn = len(neighbours)
 
