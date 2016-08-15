@@ -368,17 +368,22 @@ def runFilt(band, filtFunc, minKsize, maxKsize):
   return bandFilt
 
 #
-# Calculates mean and mean absolute deviation (MAD) of neighboring pixels in a given band
+# Calculates mean and mean absolute deviation (MAD) of neighbouring pixels in a given band
+# Valid neighbouring pixels must match the waterMask state of the corresponding waterMask center pixel
 # Is used when both mean and MAD is required
-# waterMask :: 0 = land, 1 = water pixel
-#
 def meanMadFilt(waterMask, rawband, minKsize, maxKsize, footprintx, footprinty, ksizes, minNcount, minNfrac):
 
   sizex, sizey = np.shape(rawband)
   bSize = (maxKsize - 1) / 2
   padsizex = sizex + 2 * bSize
   padsizey = sizey + 2 * bSize
+
+  # This is the window which will be processed
   band = np.pad(rawband, ((bSize, bSize), (bSize, bSize)), mode='symmetric')
+
+  # Get the window for the water mask as well
+  waterBand = np.pad(waterMask, ((bSize, bSize), (bSize, bSize)), mode='symmetric')
+
   meanFilt = np.full([padsizex, padsizey], -4.0, dtype=np.float32)
   madFilt = np.full([padsizex, padsizey], -4.0, dtype=np.float32)
 
@@ -393,12 +398,19 @@ def meanMadFilt(waterMask, rawband, minKsize, maxKsize, footprintx, footprinty, 
       # This is the center pixel of the window
       centerVal = band[x, y]
 
+      # Get the corresponding center pixel of the water mask, 0 = land, 1 = water
+      centerWaterVal = waterBand[x, y]
+
       if (centerVal not in range(-2, 0)):
 
         if meanFilt[x, y] == -4:
 
+          # Get all possible neighbours of the current window
           neighbours = band[x + footprintx[0], y + footprinty[0]]
-          neighbours = neighbours[np.where(neighbours > 0)]
+
+          # Remove neighbours which do not correspond to identical values in the waterMask regarding the centerWaterVal
+          waterBandNeighbours = waterBand[x + footprintx[0], y + footprinty[0]]
+          neighbours = neighbours[np.where(waterBandNeighbours == centerWaterVal)]
 
           nn = len(neighbours)
 
@@ -412,19 +424,32 @@ def meanMadFilt(waterMask, rawband, minKsize, maxKsize, footprintx, footprinty, 
             madFilt[x, y] = bgMAD
 
   for i in range(1, len(ksizes)):
+
     nmin = min(minNcount, minNfrac * ksizes[i] * ksizes[i])
+
     for y in range(bSize, sizey + bSize):
       for x in range(bSize, sizex + bSize):
+
+        # This is the center pixel of the window
         centerVal = band[x, y]
+
+        # Get the corresponding center pixel of the water mask, 0 = land, 1 = water
+        centerWaterVal = waterBand[x, y]
+
         if centerVal == -4:
           if meanFilt[x, y] == -4:
 
-            neighbours = band[x + footprintx[i], y + footprinty[i]]
-            neighbours = neighbours[np.where(neighbours > 0)]
+            # Get all possible neighbours of the current window
+            neighbours = band[x + footprintx[0], y + footprinty[0]]
+
+            # Remove neighbours which do not correspond to identical values in the waterMask regarding the centerWaterVal
+            waterBandNeighbours = waterBand[x + footprintx[0], y + footprinty[0]]
+            neighbours = neighbours[np.where(waterBandNeighbours == centerWaterVal)]
 
             nn = len(neighbours)
 
             if (nn > nmin):
+
               bgMean = np.sum(neighbours) * divTable[nn]
               meanFilt[x, y] = bgMean
               meanDists = np.abs(neighbours - bgMean)
