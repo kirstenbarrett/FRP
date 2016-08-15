@@ -370,8 +370,9 @@ def runFilt(band, filtFunc, minKsize, maxKsize):
 #
 # Calculates mean and mean absolute deviation (MAD) of neighboring pixels in a given band
 # Is used when both mean and MAD is required
+# waterMask :: 0 = land, 1 = water pixel
 #
-def meanMadFilt(rawband, minKsize, maxKsize, footprintx, footprinty, ksizes, minNcount, minNfrac):
+def meanMadFilt(waterMask, rawband, minKsize, maxKsize, footprintx, footprinty, ksizes, minNcount, minNfrac):
 
   sizex, sizey = np.shape(rawband)
   bSize = (maxKsize - 1) / 2
@@ -381,21 +382,29 @@ def meanMadFilt(rawband, minKsize, maxKsize, footprintx, footprinty, ksizes, min
   meanFilt = np.full([padsizex, padsizey], -4.0, dtype=np.float32)
   madFilt = np.full([padsizex, padsizey], -4.0, dtype=np.float32)
 
-  print meanFilt, madFilt
-
   divTable = 1.0 / np.arange(1, maxKsize * maxKsize, dtype=np.float64)
   divTable = np.insert(divTable, 0, 0)
 
   nmin = min(minNcount, minNfrac * minKsize * minKsize)
+
   for y in range(bSize, sizey + bSize):
     for x in range(bSize, sizex + bSize):
+
+      # This is the center pixel of the window
       centerVal = band[x, y]
-      if centerVal not in range(-2, 0):
+
+      if (centerVal not in range(-2, 0)):
+
         if meanFilt[x, y] == -4:
+
           neighbours = band[x + footprintx[0], y + footprinty[0]]
           neighbours = neighbours[np.where(neighbours > 0)]
+
           nn = len(neighbours)
+
+          # The number of valid neighbours is more than what is required
           if (nn > nmin):
+
             bgMean = np.sum(neighbours) * divTable[nn]
             meanFilt[x, y] = bgMean
             meanDists = np.abs(neighbours - bgMean)
@@ -409,9 +418,12 @@ def meanMadFilt(rawband, minKsize, maxKsize, footprintx, footprinty, ksizes, min
         centerVal = band[x, y]
         if centerVal == -4:
           if meanFilt[x, y] == -4:
+
             neighbours = band[x + footprintx[i], y + footprinty[i]]
             neighbours = neighbours[np.where(neighbours > 0)]
+
             nn = len(neighbours)
+
             if (nn > nmin):
               bgMean = np.sum(neighbours) * divTable[nn]
               meanFilt[x, y] = bgMean
@@ -688,12 +700,18 @@ def process(filMOD02, commandLineArgs, cwd):
     # After all the data has been read
     bgMask = np.zeros((nRows, nCols), dtype=np.int)
 
+    ########################################
+    # THIS IS BACKGROUND CHARACTERIZATION
+    ########################################
     # Background fire test (Gilio 2003, Section 2.2.3, first paragraph)
     with np.errstate(invalid='ignore'):
       bgMask[np.where(
         (dayFlag == 1) & (allArrays['BAND22'] > (325 * reductionFactor)) & (deltaT > (20 * reductionFactor)))] = bgFlag
       bgMask[np.where(
         (dayFlag == 0) & (allArrays['BAND22'] > (310 * reductionFactor)) & (deltaT > (10 * reductionFactor)))] = bgFlag
+
+    # TODO remove this setting once finished
+    np.set_printoptions(threshold=np.inf)
 
     b21bgMask = np.copy(b21CloudWaterMasked)
     b21bgMask[np.where(bgMask == bgFlag)] = bgFlag
@@ -708,29 +726,13 @@ def process(filMOD02, commandLineArgs, cwd):
     deltaTbgMask[np.where(bgMask == bgFlag)] = bgFlag
 
     # Mean and mad filters - mad needed for confidence estimation
-    b22meanFilt, b22MADfilt = meanMadFilt(b22bgMask, maxKsize, minKsize, footprintx, footprinty, ksizes, minNcount, minNfrac)
+    b22meanFilt, b22MADfilt = meanMadFilt(waterMask, b22bgMask, maxKsize, minKsize, footprintx, footprinty, ksizes, minNcount, minNfrac)
     b22minusBG = np.copy(b22CloudWaterMasked) - np.copy(b22meanFilt)
-    b31meanFilt, b31MADfilt = meanMadFilt(b31bgMask, maxKsize, minKsize, footprintx, footprinty, ksizes, minNcount, minNfrac)
-    deltaTmeanFilt, deltaTMADFilt = meanMadFilt(deltaTbgMask, maxKsize, minKsize, footprintx, footprinty, ksizes, minNcount, minNfrac)
+    b31meanFilt, b31MADfilt = meanMadFilt(waterMask, b31bgMask, maxKsize, minKsize, footprintx, footprinty, ksizes, minNcount, minNfrac)
+    deltaTmeanFilt, deltaTMADFilt = meanMadFilt(waterMask, deltaTbgMask, maxKsize, minKsize, footprintx, footprinty, ksizes, minNcount, minNfrac)
     b22bgRej = np.copy(allArrays['BAND22'])
     b22bgRej[np.where(bgMask != bgFlag)] = bgFlag
-    b22rejMeanFilt, b22rejMADfilt = meanMadFilt(b22bgRej, maxKsize, minKsize, footprintx, footprinty, ksizes, minNcount, minNfrac)
-
-    # A pixel has to be either water or land.
-    # In the background characterization, the centre pixel is compared to the mean or MAD of it's neighbors.
-    # Valid neighboring pixels must match the centre pixel (i.e., if the centre pixel is water, the neighboring pixels considered as background must also be water and vice versa).
-    np.set_printoptions(threshold=np.inf)
-
-    print b22meanFilt.shape
-    print b22MADfilt.shape
-    print b22minusBG.shape
-    print b31meanFilt.shape
-    print b31MADfilt.shape
-    print deltaTmeanFilt.shape
-    print deltaTMADFilt.shape
-    print b22bgRej.shape
-    print b22rejMeanFilt.shape
-    print b22rejMADfilt.shape
+    b22rejMeanFilt, b22rejMADfilt = meanMadFilt(waterMask, b22bgRej, maxKsize, minKsize, footprintx, footprinty, ksizes, minNcount, minNfrac)
 
     # Potential fire test (Giglio 2016, Section 3.3)
     potFire = np.zeros((nRows, nCols), dtype=np.int)
