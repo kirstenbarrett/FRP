@@ -33,7 +33,7 @@ directory = input.readline()
 
 input.close()
 
-if (doProfiling.upper() == "FALSE"):
+if doProfiling.upper() == "FALSE":
 
   cyfrp.run(directory, ay, by, ax, bx, reductionFactor, minNcount, minNfrac, minKsize, maxKsize, decimalPlaces)
 
