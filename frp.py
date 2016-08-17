@@ -702,10 +702,9 @@ def process(filMOD02, commandLineArgs, cwd):
     waterMask = np.zeros((nRows, nCols), dtype=np.int)
     waterMask[np.where(allArrays['LANDMASK'] != 1)] = waterFlag
 
-    # TODO these threshold values need changing
     # Create cloud mask (Giglio, 2016 Section 3.2)
     cloudMask = np.zeros((nRows, nCols), dtype=np.int)
-    cloudMask[((allArrays['BAND1x1k'] + allArrays['BAND2x1k']) > 900)] = cloudFlag
+    cloudMask[((allArrays['BAND1x1k'] + allArrays['BAND2x1k']) > 1200)] = cloudFlag
     cloudMask[(allArrays['BAND32'] < 265)] = cloudFlag
     cloudMask[((allArrays['BAND1x1k'] + allArrays['BAND2x1k']) > 700) & (allArrays['BAND32'] < 285)] = cloudFlag
 
@@ -739,9 +738,6 @@ def process(filMOD02, commandLineArgs, cwd):
         (dayFlag == 1) & (allArrays['BAND22'] > (325 * reductionFactor)) & (deltaT > (20 * reductionFactor)))] = bgFlag
       bgMask[np.where(
         (dayFlag == 0) & (allArrays['BAND22'] > (310 * reductionFactor)) & (deltaT > (10 * reductionFactor)))] = bgFlag
-
-    # TODO remove this setting once finished
-    np.set_printoptions(threshold=np.inf)
 
     b21bgMask = np.copy(b21CloudWaterMasked)
     b21bgMask[np.where(bgMask == bgFlag)] = bgFlag
