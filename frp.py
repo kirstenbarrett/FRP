@@ -707,6 +707,8 @@ def process(filMOD02, commandLineArgs, cwd):
     cloudMask[((allArrays['BAND1x1k'] + allArrays['BAND2x1k']) > 1200)] = cloudFlag
     cloudMask[(allArrays['BAND32'] < 265)] = cloudFlag
     cloudMask[((allArrays['BAND1x1k'] + allArrays['BAND2x1k']) > 700) & (allArrays['BAND32'] < 285)] = cloudFlag
+    # TODO
+    # ðwater pixel and ρ0:86 N 0:25 and T 12 b 300 KÞ:
 
     # Mask clouds and water from input bands
     b21CloudWaterMasked = np.copy(allArrays['BAND21'])  # ONLY B21
