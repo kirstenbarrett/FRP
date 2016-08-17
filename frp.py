@@ -702,6 +702,7 @@ def process(filMOD02, commandLineArgs, cwd):
     waterMask = np.zeros((nRows, nCols), dtype=np.int)
     waterMask[np.where(allArrays['LANDMASK'] != 1)] = waterFlag
 
+    # TODO these threshold values need changing
     # Create cloud mask (Giglio, 2016 Section 3.2)
     cloudMask = np.zeros((nRows, nCols), dtype=np.int)
     cloudMask[((allArrays['BAND1x1k'] + allArrays['BAND2x1k']) > 900)] = cloudFlag
