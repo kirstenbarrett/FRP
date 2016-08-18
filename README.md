@@ -1,6 +1,6 @@
 # TODO
 
-* Remove any references to giglio 2016 as this is the giglio 2003 version.
+* Remove any references to giglio 2016 (as well as associated code) as this is the giglio 2003 version.
 
 # Open source fire detection algorithm
 
