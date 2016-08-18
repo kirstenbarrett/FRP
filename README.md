@@ -1,7 +1,3 @@
-# TODO
-
-* Remove any references to giglio 2016 (as well as associated code) as this is the giglio 2003 version.
-
 # Open source fire detection algorithm
 
 The algorithm uses MODIS version 005 data and the Giglio 2003 defaults for values in thresholding and masking.
