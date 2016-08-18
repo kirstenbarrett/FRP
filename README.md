@@ -1,4 +1,6 @@
-# FRP Cython
+# Open source fire detection algorithm
+
+The algorithm uses MODIS version 005 data and the Giglio 2003 defaults for values in thresholding and masking.
 
 ## Executing on [ALICE](http://www2.le.ac.uk/offices/itservices/ithelp/services/hpc/alice). 
 
