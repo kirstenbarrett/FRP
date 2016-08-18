@@ -118,8 +118,8 @@ cdef runFilt(band, filtFunc, int minKsize, int maxKsize):
 cdef meanMadFilt(np.ndarray[np.float64_t, ndim=2] waterMask, np.ndarray[np.float64_t, ndim=2] rawband, int minKsize, int maxKsize, minNcount, float minNfrac, footprintx, footprinty, ksizes):
 
     cdef int sizex, sizey, bSize, padsizex, padsizey, i, x, y, nmin, nn
-    cdef float centerVal, bgMean
-    cdef np.ndarray[np.float64_t, ndim=1] meanDists, neighbours
+    cdef float centerVal, bgMean, centerWaterVal
+    cdef np.ndarray[np.float64_t, ndim=1] meanDists, neighbours, waterBandNeighbours
     cdef np.ndarray[np.float64_t, ndim=2] meanFilt,madFilt
     cdef np.ndarray[np.float64_t, ndim=2] band, waterBand
     cdef np.ndarray[np.float64_t, ndim=1] divTable
@@ -139,11 +139,20 @@ cdef meanMadFilt(np.ndarray[np.float64_t, ndim=2] waterMask, np.ndarray[np.float
     nmin = min(minNcount, minNfrac*minKsize*minKsize)
     for y in range(bSize, sizey+bSize):
         for x in range(bSize, sizex+bSize):
+
             centerVal = band[x,y]
+            centerWaterVal = waterBand[x, y]
+
             if centerVal not in range(-2,0):
               if meanFilt[x,y]==-4:
+
                 neighbours = band[x+footprintx[0], y+footprinty[0]]
+
+                waterBandNeighbours = waterBand[x + footprintx[0], y + footprinty[0]]
+                neighbours = neighbours[np.where(waterBandNeighbours == centerWaterVal)]
+
                 neighbours = neighbours[np.where(neighbours>0)]
+
                 nn = len(neighbours)
                 if (nn > nmin):
                     bgMean = np.sum(neighbours)*divTable[nn]
@@ -156,11 +165,20 @@ cdef meanMadFilt(np.ndarray[np.float64_t, ndim=2] waterMask, np.ndarray[np.float
         nmin = min(minNcount, minNfrac*ksizes[i]*ksizes[i])
         for y in range(bSize,sizey+bSize):
             for x in range(bSize,sizex+bSize):
+
                 centerVal = band[x,y]
+                centerWaterVal = waterBand[x, y]
+
                 if centerVal == -4:
                   if meanFilt[x,y]==-4:
+
                     neighbours = band[x+footprintx[i], y+footprinty[i]]
+
+                    waterBandNeighbours = waterBand[x + footprintx[0], y + footprinty[0]]
+                    neighbours = neighbours[np.where(waterBandNeighbours == centerWaterVal)]
+
                     neighbours = neighbours[np.where(neighbours>0)]
+
                     nn = len(neighbours)
                     if (nn > nmin):
                         bgMean = np.sum(neighbours)*divTable[nn]
