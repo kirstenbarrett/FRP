@@ -402,7 +402,7 @@ cdef process(filMOD02, HDF03, float minLat, float maxLat, float minLon, float ma
 
     # Create cloud mask
     cloudMask = np.zeros((nRows, nCols), dtype=np.float64)
-    cloudMask[((allArrays['BAND1x1k'] + allArrays['BAND2x1k']) > 900)] = cloudFlag
+    cloudMask[((allArrays['BAND1x1k'] + allArrays['BAND2x1k']) > 1200)] = cloudFlag
     cloudMask[(allArrays['BAND32'] < 265)] = cloudFlag
     cloudMask[((allArrays['BAND1x1k'] + allArrays['BAND2x1k']) > 700) & (allArrays['BAND32'] < 285)] = cloudFlag
 

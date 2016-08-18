@@ -14,5 +14,3 @@ Log into Alice and then on the command line
 # TODO
 
 Incorporate [meanMadFilt valid neighbours](https://github.com/kirstenbarrett/FRP/commit/531276ba7482d6e6111ee22df5d1f53f59e9a543).
-
-Incorporate [cloud masking thresholds](https://github.com/kirstenbarrett/FRP/commit/33ada1ec87cdcf5a704a873dcfc9d13ada3b2f0d).
