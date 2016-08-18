@@ -10,7 +10,3 @@ Log into Alice and then on the command line
     module load python/2.7.9 gdal/1.11.4 R
     make
     qsub q.sub
-    
-# TODO
-
-Incorporate [meanMadFilt valid neighbours](https://github.com/kirstenbarrett/FRP/commit/531276ba7482d6e6111ee22df5d1f53f59e9a543).

@@ -115,13 +115,13 @@ cdef runFilt(band, filtFunc, int minKsize, int maxKsize):
 
   return bandFilt
 
-cdef meanMadFilt(np.ndarray[np.float64_t, ndim=2] rawband, int minKsize, int maxKsize, minNcount, float minNfrac, footprintx, footprinty, ksizes):
+cdef meanMadFilt(np.ndarray[np.float64_t, ndim=2] waterMask, np.ndarray[np.float64_t, ndim=2] rawband, int minKsize, int maxKsize, minNcount, float minNfrac, footprintx, footprinty, ksizes):
 
     cdef int sizex, sizey, bSize, padsizex, padsizey, i, x, y, nmin, nn
     cdef float centerVal, bgMean
     cdef np.ndarray[np.float64_t, ndim=1] meanDists, neighbours
     cdef np.ndarray[np.float64_t, ndim=2] meanFilt,madFilt
-    cdef np.ndarray[np.float64_t, ndim=2] band
+    cdef np.ndarray[np.float64_t, ndim=2] band, waterBand
     cdef np.ndarray[np.float64_t, ndim=1] divTable
 
     sizex, sizey = np.shape(rawband)
@@ -129,6 +129,7 @@ cdef meanMadFilt(np.ndarray[np.float64_t, ndim=2] rawband, int minKsize, int max
     padsizex = sizex+2*bSize
     padsizey = sizey+2*bSize
     band = np.pad(rawband,((bSize,bSize),(bSize,bSize)),mode='symmetric')
+    waterBand = np.pad(waterMask, ((bSize, bSize), (bSize, bSize)), mode='symmetric')
     meanFilt = np.full([padsizex,padsizey], -4.0, dtype=np.float64)
     madFilt = np.full([padsizex,padsizey], -4.0, dtype=np.float64)
 
@@ -446,14 +447,14 @@ cdef process(filMOD02, HDF03, float minLat, float maxLat, float minLon, float ma
     deltaTbgMask[np.where(bgMask == bgFlag)] = bgFlag
 
     # Mean and mad filters - mad needed for confidence estimation
-    b22meanFilt, b22MADfilt = meanMadFilt(b22bgMask, maxKsize, minKsize, minNcount, minNfrac, footprintx, footprinty, ksizes)
+    b22meanFilt, b22MADfilt = meanMadFilt(waterMask, b22bgMask, maxKsize, minKsize, minNcount, minNfrac, footprintx, footprinty, ksizes)
     b22minusBG = np.copy(b22CloudWaterMasked) - np.copy(b22meanFilt)
-    b31meanFilt, b31MADfilt = meanMadFilt(b31bgMask, maxKsize, minKsize, minNcount, minNfrac, footprintx, footprinty, ksizes)
-    deltaTmeanFilt, deltaTMADFilt = meanMadFilt(deltaTbgMask, maxKsize, minKsize, minNcount, minNfrac, footprintx, footprinty, ksizes)
+    b31meanFilt, b31MADfilt = meanMadFilt(waterMask, b31bgMask, maxKsize, minKsize, minNcount, minNfrac, footprintx, footprinty, ksizes)
+    deltaTmeanFilt, deltaTMADFilt = meanMadFilt(waterMask, deltaTbgMask, maxKsize, minKsize, minNcount, minNfrac, footprintx, footprinty, ksizes)
 
     b22bgRej = np.copy(allArrays['BAND22'])
     b22bgRej[np.where(bgMask != bgFlag)] = bgFlag
-    b22rejMeanFilt, b22rejMADfilt = meanMadFilt(b22bgRej, maxKsize, minKsize, minNcount, minNfrac, footprintx, footprinty, ksizes)
+    b22rejMeanFilt, b22rejMADfilt = meanMadFilt(waterMask, b22bgRej, maxKsize, minKsize, minNcount, minNfrac, footprintx, footprinty, ksizes)
 
     # Potential fire test
     potFire = np.zeros((nRows, nCols), dtype=np.int)
