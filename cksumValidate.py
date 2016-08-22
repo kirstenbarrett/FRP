@@ -71,16 +71,11 @@ for v in validated:
     notDownloadedFiles.append(file)
 
 # Output results
-print "\n"
-print str(len(notDownloadedFiles)) + " files not downloaded"
-
+print "\n" + str(len(notDownloadedFiles)) + " files could not be checked for integrity\n"
 for f in notDownloadedFiles:
-
   print f
 
-print str(len(invalidFiles)) + " invalid files found"
-
+print "\n" + str(len(invalidFiles)) + " invalid files found\n"
 for f in invalidFiles:
-
   print f
 
