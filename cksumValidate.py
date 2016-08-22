@@ -45,18 +45,18 @@ for v in validated:
   # For each file downloaded
   for d in downloaded:
 
-    parts = d.split()
-    dChecksum = parts[0]
-    dSize = parts[1]
-    dFile = parts[2]
-
     # There is a checksum entry
-    if file == dFile:
+    if file in d:
 
       fileFound = True
 
-      # The checksum and file size are valid
-      if checksum == dChecksum and size == dSize:
+      parts = d.split()
+      dChecksum = parts[0]
+      dSize = parts[1]
+      dFile = parts[2]
+
+      # The file, checksum and file size are valid
+      if file == dFile and checksum == dChecksum and size == dSize:
 
         print file + " is validated"
 
@@ -83,3 +83,4 @@ print str(len(invalidFiles)) + " invalid files found"
 for f in invalidFiles:
 
   print f
+
