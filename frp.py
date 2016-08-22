@@ -384,12 +384,8 @@ def runFilt(band, filtFunc, minKsize, maxKsize):
 # Calculates mean and mean absolute deviation (MAD) of neighbouring pixels in a given band
 # Valid neighbouring pixels must match the waterMask state of the corresponding waterMask center pixel
 # Is used when both mean and MAD is required
-<<<<<<< HEAD
+
 def meanMadFilt(waterMask, rawband, minKsize, maxKsize, footprintx, footprinty, ksizes, minNcount, minNfrac):
-=======
-#
-def meanMadFilt(rawband, minKsize, maxKsize, footprintx, footprinty, ksizes, minNcount, minNfrac):
->>>>>>> 99cc8d7b837f3be9f98790e31fe3c993f64ffefe
   sizex, sizey = np.shape(rawband)
   bSize = (maxKsize - 1) / 2
   padsizex = sizex + 2 * bSize
@@ -768,7 +764,6 @@ def process(filMOD02, commandLineArgs, cwd):
     deltaTbgMask[np.where(bgMask == bgFlag)] = bgFlag
 
     # Mean and mad filters - mad needed for confidence estimation
-<<<<<<< HEAD
     b22meanFilt, b22MADfilt = meanMadFilt(waterMask, b22bgMask, maxKsize, minKsize, footprintx, footprinty, ksizes,
                                           minNcount, minNfrac)
     b22minusBG = np.copy(b22CloudWaterMasked) - np.copy(b22meanFilt)
@@ -780,20 +775,6 @@ def process(filMOD02, commandLineArgs, cwd):
     b22bgRej[np.where(bgMask != bgFlag)] = bgFlag
     b22rejMeanFilt, b22rejMADfilt = meanMadFilt(waterMask, b22bgRej, maxKsize, minKsize, footprintx, footprinty, ksizes,
                                                 minNcount, minNfrac)
-=======
-    b22meanFilt, b22MADfilt = meanMadFilt(b22bgMask, maxKsize, minKsize, footprintx, footprinty, ksizes, minNcount,
-                                          minNfrac)
-    b22minusBG = np.copy(b22CloudWaterMasked) - np.copy(b22meanFilt)
-    b31meanFilt, b31MADfilt = meanMadFilt(b31bgMask, maxKsize, minKsize, footprintx, footprinty, ksizes, minNcount,
-                                          minNfrac)
-    deltaTmeanFilt, deltaTMADFilt = meanMadFilt(deltaTbgMask, maxKsize, minKsize, footprintx, footprinty, ksizes,
-                                                minNcount, minNfrac)
-
-    b22bgRej = np.copy(allArrays['BAND22'])
-    b22bgRej[np.where(bgMask != bgFlag)] = bgFlag
-    b22rejMeanFilt, b22rejMADfilt = meanMadFilt(b22bgRej, maxKsize, minKsize, footprintx, footprinty, ksizes, minNcount,
-                                                minNfrac)
->>>>>>> 99cc8d7b837f3be9f98790e31fe3c993f64ffefe
 
     # Potential fire test (Giglio 2003, Section 2.2.1)
     potFire = np.zeros((nRows, nCols), dtype=np.int)
@@ -947,12 +928,6 @@ def process(filMOD02, commandLineArgs, cwd):
 
     # If any fires have been detected, calculate Fire Radiative Power (FRP)
     if np.max(allFires) > 0:
-<<<<<<< HEAD
-=======
-
-      datsWdata.append(t)
->>>>>>> 99cc8d7b837f3be9f98790e31fe3c993f64ffefe
-
       b22firesAllMask = allFires * allArrays['BAND22']
       b22bgAllMask = allFires * b22meanFilt
 
