@@ -698,7 +698,7 @@ def process(filMOD02, commandLineArgs, cwd):
 
     # Create cloud mask (Giglio, 2003 Section 2.1)
     cloudMask = np.zeros((nRows, nCols), dtype=np.int)
-    cloudMask[((allArrays['BAND1x1k'] + allArrays['BAND2x1k']) > 1200) & (dayFlag == 1)] = cloudFlag
+    cloudMask[((allArrays['BAND1x1k'] + allArrays['BAND2x1k']) > 900) & (dayFlag == 1)] = cloudFlag
     cloudMask[(allArrays['BAND32'] < 265) & (dayFlag == 1)] = cloudFlag
     cloudMask[(((allArrays['BAND1x1k'] + allArrays['BAND2x1k']) > 700) & (allArrays['BAND32'] < 285)) & (dayFlag ==1)] = cloudFlag
     cloudMask[((allArrays['BAND32'] < 265) & (dayFlag == 0))] = cloudFlag
