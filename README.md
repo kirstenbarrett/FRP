@@ -2,26 +2,31 @@
 
 The algorithm uses MODIS version 005 data and the Giglio 2003 defaults for values in thresholding and masking.
 
-## FTP Download of HDFs
+## Downloading of HDF orders
 
-To programatically download HDFs via FTP use the `hdf_ftp.py` program.
+In order to get HDF data one has to fill out an order form at <https://ladsweb.nascom.nasa.gov/data/search.html>. 
+
+Upon ordering you will receive a number which is required to download the order.
+
+If you have wget available you can simply run;
+
+    wget -r -N -c ladsweb.nascom.nasa.gov/orders/{ORDER NUMBER}
+
+You can also download HDFs via FTP using the `hdf_ftp.py` program.
  
 It can be used as both a standalone module, or you can use it directly when executing `frp.py`. 
 
-You can order specific HDFs by filling out the form which is located at the following URL <https://ladsweb.nascom.nasa.gov/data/search.html>.
+For help please run `python hdf_ftp.py -h`.
 
-The order number which is obtained from the form is required as a program argument. You can check all current orders in your browser by using the following URL <ftp://ladsweb.nascom.nasa.gov/orders/>.
+## Validation of HDF orders
 
-## Help
+In order to validate the HDFs in your downloaded order one can use the `cksum.py` script.
 
-In order to see program information and help please use the following terminal commands.
-
-    hdf_ftp.py -h
-    frp.py -h
+For help please run `python cksum.py -h`.
 
 ## Running FRP on OSX
 
-Install **command line tools** `xcode-select –install`
+Install **command line tools** `xcode-select -–install`
 
 Install **homebrew** `ruby -e “$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/master/install)”`
 
