@@ -425,6 +425,12 @@ cdef process(filMOD02, HDF03, float minLat, float maxLat, float minLon, float ma
     cloudMask[(allArrays['BAND32'] < 265)] = cloudFlag
     cloudMask[((allArrays['BAND1x1k'] + allArrays['BAND2x1k']) > 700) & (allArrays['BAND32'] < 285)] = cloudFlag
 
+    cloudMask2 = np.zeros((nRows, nCols), dtype=np.int)
+    cloudMask2[(allArrays['BAND2x1k'] > 250) & (allArrays['BAND32'] < 300)] = cloudFlag
+    cloudMask2[np.where(waterMask == waterFlag)] = cloudFlag
+
+    cloudMask[np.where(cloudMask2, cloudMask == cloudFlag, cloudFlag)] = cloudFlag
+
     # Mask clouds and water from input bands
     b21CloudWaterMasked = np.copy(allArrays['BAND21'])  # ONLY B21
     b21CloudWaterMasked[np.where(waterMask == waterFlag)] = waterFlag
