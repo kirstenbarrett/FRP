@@ -429,7 +429,7 @@ cdef process(filMOD02, HDF03, float minLat, float maxLat, float minLon, float ma
     cloudMask2[(allArrays['BAND2x1k'] > 250) & (allArrays['BAND32'] < 300)] = cloudFlag
     cloudMask2[np.where(waterMask == waterFlag)] = cloudFlag
 
-    cloudMask[np.where(cloudMask2, cloudMask == cloudFlag, cloudFlag)] = cloudFlag
+    cloudMask[(cloudMask == cloudFlag) & (cloudMask2 == cloudFlag)] = cloudFlag
 
     # Mask clouds and water from input bands
     b21CloudWaterMasked = np.copy(allArrays['BAND21'])  # ONLY B21
