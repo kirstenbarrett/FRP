@@ -385,7 +385,7 @@ def runFilt(band, filtFunc, minKsize, maxKsize):
 # Valid neighbouring pixels must match the waterMask state of the corresponding waterMask center pixel
 # Is used when both mean and MAD is required
 
-def meanMadFilt(waterMask, rawband, minKsize, maxKsize, footprintx, footprinty, ksizes, minNcount, minNfrac):
+def meanMadFilt(rawband, minKsize, maxKsize, footprintx, footprinty, ksizes, minNcount, minNfrac):
   sizex, sizey = np.shape(rawband)
   bSize = (maxKsize - 1) / 2
   padsizex = sizex + 2 * bSize
@@ -393,9 +393,6 @@ def meanMadFilt(waterMask, rawband, minKsize, maxKsize, footprintx, footprinty, 
 
   # This is the window which will be processed
   band = np.pad(rawband, ((bSize, bSize), (bSize, bSize)), mode='symmetric')
-
-  # Get the window for the water mask as well
-  waterBand = np.pad(waterMask, ((bSize, bSize), (bSize, bSize)), mode='symmetric')
 
   meanFilt = np.full([padsizex, padsizey], -4.0, dtype=np.float32)
   madFilt = np.full([padsizex, padsizey], -4.0, dtype=np.float32)
@@ -411,19 +408,12 @@ def meanMadFilt(waterMask, rawband, minKsize, maxKsize, footprintx, footprinty, 
       # This is the center pixel of the window
       centerVal = band[x, y]
 
-      # Get the corresponding center pixel of the water mask, 0 = land, 1 = water
-      centerWaterVal = waterBand[x, y]
-
       if (centerVal not in range(-2, 0)):
 
         if meanFilt[x, y] == -4:
 
           # Get all possible neighbours of the current window
           neighbours = band[x + footprintx[0], y + footprinty[0]]
-
-          # Remove neighbours which correspond to a value in the water mask which is not equal to the water mask centre value
-          waterBandNeighbours = waterBand[x + footprintx[0], y + footprinty[0]]
-          neighbours = neighbours[np.where(waterBandNeighbours == centerWaterVal)]
 
           neighbours = neighbours[np.where(neighbours > 0)]
 
@@ -447,18 +437,11 @@ def meanMadFilt(waterMask, rawband, minKsize, maxKsize, footprintx, footprinty, 
         # This is the center pixel of the window
         centerVal = band[x, y]
 
-        # Get the corresponding center pixel of the water mask, 0 = land, 1 = water
-        centerWaterVal = waterBand[x, y]
-
         if centerVal == -4:
           if meanFilt[x, y] == -4:
 
             # Get all possible neighbours of the current window
             neighbours = band[x + footprintx[0], y + footprinty[0]]
-
-            # Remove neighbours which correspond to a value in the water mask which is not equal to the water mask centre value
-            waterBandNeighbours = waterBand[x + footprintx[0], y + footprinty[0]]
-            neighbours = neighbours[np.where(waterBandNeighbours == centerWaterVal)]
 
             neighbours = neighbours[np.where(neighbours > 0)]
 
@@ -764,16 +747,16 @@ def process(filMOD02, commandLineArgs, cwd):
     deltaTbgMask[np.where(bgMask == bgFlag)] = bgFlag
 
     # Mean and mad filters - mad needed for confidence estimation
-    b22meanFilt, b22MADfilt = meanMadFilt(waterMask, b22bgMask, maxKsize, minKsize, footprintx, footprinty, ksizes,
+    b22meanFilt, b22MADfilt = meanMadFilt(b22bgMask, maxKsize, minKsize, footprintx, footprinty, ksizes,
                                           minNcount, minNfrac)
     b22minusBG = np.copy(b22CloudWaterMasked) - np.copy(b22meanFilt)
-    b31meanFilt, b31MADfilt = meanMadFilt(waterMask, b31bgMask, maxKsize, minKsize, footprintx, footprinty, ksizes,
+    b31meanFilt, b31MADfilt = meanMadFilt(b31bgMask, maxKsize, minKsize, footprintx, footprinty, ksizes,
                                           minNcount, minNfrac)
-    deltaTmeanFilt, deltaTMADFilt = meanMadFilt(waterMask, deltaTbgMask, maxKsize, minKsize, footprintx, footprinty,
+    deltaTmeanFilt, deltaTMADFilt = meanMadFilt(deltaTbgMask, maxKsize, minKsize, footprintx, footprinty,
                                                 ksizes, minNcount, minNfrac)
     b22bgRej = np.copy(allArrays['BAND22'])
     b22bgRej[np.where(bgMask != bgFlag)] = bgFlag
-    b22rejMeanFilt, b22rejMADfilt = meanMadFilt(waterMask, b22bgRej, maxKsize, minKsize, footprintx, footprinty, ksizes,
+    b22rejMeanFilt, b22rejMADfilt = meanMadFilt(b22bgRej, maxKsize, minKsize, footprintx, footprinty, ksizes,
                                                 minNcount, minNfrac)
 
     # Potential fire test (Giglio 2003, Section 2.2.1)
