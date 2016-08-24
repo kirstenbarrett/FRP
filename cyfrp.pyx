@@ -239,10 +239,15 @@ cdef process(filMOD02, HDF03, float minLat, float maxLat, float minLon, float ma
   cdef str datNam = yr + julianDay + '.' + hr + mint
 
   # Get the corresponding 03 HDF
+  filMOD03 = None
   for filNamCandidate in HDF03:
     if datNam in filNamCandidate:
       filMOD03 = filNamCandidate
       break
+
+  # The HDF03 does not exist - exit as we don't process a solitary HDF02
+  if filMOD03 is None:
+    return
 
   fullArrays = {}
 
