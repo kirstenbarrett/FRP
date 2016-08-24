@@ -249,13 +249,13 @@ cdef process(filMOD02, HDF03, float minLat, float maxLat, float minLon, float ma
   if filMOD03 is None:
     return
 
+  # Creates a blank dictionary to hold the full MODIS swaths
   fullArrays = {}
 
   for i, layer in enumerate(layersMOD02):
 
     file_template = 'HDF4_EOS:EOS_SWATH:%s:MODIS_SWATH_Type_L1B:%s'
     this_file = file_template % (filMOD02, layer)
-
     g = gdal.Open(this_file)
     if g is None:
       raise IOError
@@ -279,6 +279,7 @@ cdef process(filMOD02, HDF03, float minLat, float maxLat, float minLon, float ma
       radOffset = radOffsetFlt
       del radOffsetFlt
 
+      # Calculate temperature/reflectance based on scale and offset and correction term (L. Giglio, personal communication)
       B21, B22, B31, B32 = dataMOD02[B21index], dataMOD02[B22index], dataMOD02[B31index], dataMOD02[B32index]
 
       B21scale, B22scale, B31scale, B32scale = radScales[B21index], radScales[B22index], radScales[B31index], radScales[
@@ -306,6 +307,7 @@ cdef process(filMOD02, HDF03, float minLat, float maxLat, float minLon, float ma
       fullArrays['BAND32'] = T32
 
     if layer == 'EV_250_Aggr1km_RefSB':
+
       B1index, B2index = 0, 1
 
       refScales = metadataMOD02["reflectance_scales"].split(',')
@@ -376,8 +378,10 @@ cdef process(filMOD02, HDF03, float minLat, float maxLat, float minLon, float ma
   # Clip area to bounding co-ordinates
   boundCrds = np.where((minLat < fullArrays['LAT']) & (fullArrays['LAT'] < maxLat) & (fullArrays['LON'] < maxLon) & (
     minLon < fullArrays['LON']))
+
   if np.size(boundCrds) > 0 and (np.min(boundCrds[0]) != np.max(boundCrds[0])) and (
         np.min(boundCrds[1]) != np.max(boundCrds[1])):
+
     boundCrds0 = boundCrds[0]
     boundCrds1 = boundCrds[1]
     min0 = np.min(boundCrds0)
@@ -385,6 +389,7 @@ cdef process(filMOD02, HDF03, float minLat, float maxLat, float minLon, float ma
     min1 = np.min(boundCrds1)
     max1 = np.max(boundCrds1)
 
+    # Creates a blank dictionary to hold the cropped MODIS data
     allArrays = {}  # Clipped to min/max lat/long
     for b in fullArrays.keys():
       cropB = fullArrays[b][min0:max0, min1:max1]
@@ -392,11 +397,11 @@ cdef process(filMOD02, HDF03, float minLat, float maxLat, float minLon, float ma
 
     [nRows, nCols] = np.shape(allArrays['BAND22'])
 
-    # Test for b22 saturation
+    # Test for b22 saturation - replace with values from B21
     allArrays['BAND22'][np.where(allArrays['BAND22'] >= b22saturationVal)] = allArrays['BAND21'][
       np.where(allArrays['BAND22'] >= b22saturationVal)]
 
-    # Day/Night flag
+    # Day/Night flag (Giglio, 2003 Section 2.2.2)
     dayFlag = np.zeros((nRows, nCols), dtype=np.float64)
     dayFlag[np.where(allArrays['SolarZenith'] < 8500)] = 1
 
@@ -404,11 +409,12 @@ cdef process(filMOD02, HDF03, float minLat, float maxLat, float minLon, float ma
     waterMask = np.zeros((nRows, nCols), dtype=np.float64)
     waterMask[np.where(allArrays['LANDMASK'] != 1)] = waterFlag
 
-    # Create cloud mask
+    # Create cloud mask (Giglio, 2003 Section 2.1)
     cloudMask = np.zeros((nRows, nCols), dtype=np.float64)
-    cloudMask[((allArrays['BAND1x1k'] + allArrays['BAND2x1k']) > 900)] = cloudFlag
-    cloudMask[(allArrays['BAND32'] < 265)] = cloudFlag
-    cloudMask[((allArrays['BAND1x1k'] + allArrays['BAND2x1k']) > 700) & (allArrays['BAND32'] < 285)] = cloudFlag
+    cloudMask[((allArrays['BAND1x1k'] + allArrays['BAND2x1k']) > 900) & (dayFlag == 1)] = cloudFlag
+    cloudMask[(allArrays['BAND32'] < 265) & (dayFlag == 1)] = cloudFlag
+    cloudMask[(((allArrays['BAND1x1k'] + allArrays['BAND2x1k']) > 700) & (allArrays['BAND32'] < 285)) & (dayFlag ==1)] = cloudFlag
+    cloudMask[((allArrays['BAND32'] < 265) & (dayFlag == 0))] = cloudFlag
 
     # Mask clouds and water from input bands
     b21CloudWaterMasked = np.copy(allArrays['BAND21'])  # ONLY B21
@@ -431,6 +437,10 @@ cdef process(filMOD02, HDF03, float minLat, float maxLat, float minLon, float ma
     # After all the data has been read
     bgMask = np.zeros((nRows, nCols), dtype=np.float64)
 
+    ########################################
+    # THIS IS BACKGROUND CHARACTERIZATION
+    ########################################
+    # Background fire test (Gilio 2003, Section 2.2.3, first paragraph)
     with np.errstate(invalid='ignore'):
       bgMask[np.where(
         (dayFlag == 1) & (allArrays['BAND22'] > (325 * reductionFactor)) & (deltaT > (20 * reductionFactor)))] = bgFlag
@@ -450,89 +460,96 @@ cdef process(filMOD02, HDF03, float minLat, float maxLat, float minLon, float ma
     deltaTbgMask[np.where(bgMask == bgFlag)] = bgFlag
 
     # Mean and mad filters - mad needed for confidence estimation
-    b22meanFilt, b22MADfilt = meanMadFilt(b22bgMask, maxKsize, minKsize, minNcount, minNfrac, footprintx, footprinty, ksizes)
+    b22meanFilt, b22MADfilt = meanMadFilt(b22bgMask, maxKsize, minKsize, footprintx, footprinty, ksizes, minNcount,
+                                          minNfrac)
     b22minusBG = np.copy(b22CloudWaterMasked) - np.copy(b22meanFilt)
-    b31meanFilt, b31MADfilt = meanMadFilt(b31bgMask, maxKsize, minKsize, minNcount, minNfrac, footprintx, footprinty, ksizes)
-    deltaTmeanFilt, deltaTMADFilt = meanMadFilt(deltaTbgMask, maxKsize, minKsize, minNcount, minNfrac, footprintx, footprinty, ksizes)
+    b31meanFilt, b31MADfilt = meanMadFilt(b31bgMask, maxKsize, minKsize, footprintx, footprinty, ksizes, minNcount,
+                                          minNfrac)
+    deltaTmeanFilt, deltaTMADFilt = meanMadFilt(deltaTbgMask, maxKsize, minKsize, footprintx, footprinty, ksizes,
+                                                minNcount, minNfrac)
 
     b22bgRej = np.copy(allArrays['BAND22'])
     b22bgRej[np.where(bgMask != bgFlag)] = bgFlag
-    b22rejMeanFilt, b22rejMADfilt = meanMadFilt(b22bgRej, maxKsize, minKsize, minNcount, minNfrac, footprintx, footprinty, ksizes)
+    b22rejMeanFilt, b22rejMADfilt = meanMadFilt(b22bgRej, maxKsize, minKsize, footprintx, footprinty, ksizes, minNcount,
+                                                minNfrac)
 
-    # Potential fire test
+    # Potential fire test (Giglio 2003, Section 2.2.1)
     potFire = np.zeros((nRows, nCols), dtype=np.int)
     with np.errstate(invalid='ignore'):
       potFire[(dayFlag == 1) & (allArrays['BAND22'] > (310 * reductionFactor)) & (deltaT > (10 * reductionFactor)) & (
         allArrays['BAND2x1k'] < (300 * increaseFactor))] = 1
       potFire[(dayFlag == 0) & (allArrays['BAND22'] > (305 * reductionFactor)) & (deltaT > (10 * reductionFactor))] = 1
 
-    # Absolute threshold test for removing sun glint (Kaufman et al. 1998)
-    absValTest = np.zeros((nRows, nCols), dtype=np.int)
+    # Absolute threshold test 1 (Giglio 2003, Section 2.2.2)
+    test1 = np.zeros((nRows, nCols), dtype=np.int)
     with np.errstate(invalid='ignore'):
-      absValTest[(dayFlag == 1) & (allArrays['BAND22'] > (360 * reductionFactor))] = 1
-      absValTest[(dayFlag == 0) & (allArrays['BAND22'] > (305 * reductionFactor))] = 1
+      test1[(dayFlag == 1) & (allArrays['BAND22'] > (360 * reductionFactor))] = 1
+      test1[(dayFlag == 0) & (allArrays['BAND22'] > (320 * reductionFactor))] = 1
 
-    # Context fire test 2
-    deltaTMADfire = np.zeros((nRows, nCols), dtype=np.int)
+    # CONTEXTUAL TESTS - (Giglio 2003, Section 2.2.4)
+    # The number associated with each test is the number of the equation in the paper
+
+    # Context fire test 2 (Giglio 2003, Section 2.2.4)
+    test2 = np.zeros((nRows, nCols), dtype=np.int)
     with np.errstate(invalid='ignore'):
-      deltaTMADfire[deltaT > (deltaTmeanFilt + (3.5 * deltaTMADFilt))] = 1
+      test2[deltaT > (deltaTmeanFilt + (3.5 * deltaTMADFilt))] = 1
 
-    # Context fire test 3
-    deltaTfire = np.zeros((nRows, nCols), dtype=np.int)
+    # Context fire test 3 (Giglio 2003, Section 2.2.4)
+    test3 = np.zeros((nRows, nCols), dtype=np.int)
     with np.errstate(invalid='ignore'):
-      deltaTfire[np.where(deltaT > (deltaTmeanFilt + 6))] = 1
+      test3[np.where(deltaT > (deltaTmeanFilt + 6))] = 1
 
-    # Context fire test 4
-    B22fire = np.zeros((nRows, nCols), dtype=np.int)
+    # Context fire test 4 (Giglio 2003, Section 2.2.4)
+    test4 = np.zeros((nRows, nCols), dtype=np.int)
     with np.errstate(invalid='ignore'):
-      B22fire[(b22CloudWaterMasked > (b22meanFilt + (3 * b22MADfilt)))] = 1
+      test4[(b22CloudWaterMasked > (b22meanFilt + (3 * b22MADfilt)))] = 1
 
-    # Context fire test 5
-    B31fire = np.zeros((nRows, nCols), dtype=np.int)
-    B31fire[(b31CloudWaterMasked > (b31meanFilt + b31MADfilt - 4))] = 1
+    # Context fire test 5 (Giglio 2003, Section 2.2.4)
+    test5 = np.zeros((nRows, nCols), dtype=np.int)
+    test5[(b31CloudWaterMasked > (b31meanFilt + b31MADfilt - 4))] = 1
 
-    # Context fire test 6
-    B22rejFire = np.zeros((nRows, nCols), dtype=np.int)
+    # Context fire test 6 (Giglio 2003, Section 2.2.4)
+    test6 = np.zeros((nRows, nCols), dtype=np.int)
 
     with np.errstate(invalid='ignore'):
-      B22rejFire[(b22rejMADfilt > 5)] = 1
+      test6[(b22rejMADfilt > 5)] = 1
 
-    # Combine tests to create tentative fires
-    fireLocTentative = deltaTMADfire * deltaTfire * B22fire
+    # Combine tests to create tentative fires (Giglio 2003, section 2.2.5)
+    tests2and3and4 = test2 * test3 * test4
 
-    fireLocB31andB22rejFire = np.zeros((nRows, nCols), dtype=np.int)
+    test5or6 = np.zeros((nRows, nCols), dtype=np.int)
     with np.errstate(invalid='ignore'):
-      fireLocB31andB22rejFire[np.where((B22rejFire == 1) | (B31fire == 1))] = 1
-    fireLocTentativeDay = potFire * fireLocTentative * fireLocB31andB22rejFire
+      test5or6[np.where((test5 == 1) | (test6 == 1))] = 1
+    fireLocTentativeDay = potFire * tests2and3and4 * test5or6
 
     dayFires = np.zeros((nRows, nCols), dtype=np.int)
     with np.errstate(invalid='ignore'):
-      dayFires[(dayFlag == 1) & ((absValTest == 1) | (fireLocTentativeDay == 1))] = 1
+      dayFires[(dayFlag == 1) & ((test1 == 1) | (fireLocTentativeDay == 1))] = 1
 
-    # Nighttime definite fire tests
+    # Nighttime definite fire tests (Giglio 2003, section 2.2.5)
     nightFires = np.zeros((nRows, nCols), dtype=np.int)
     with np.errstate(invalid='ignore'):
-      nightFires[((dayFlag == 0) & ((fireLocTentative == 1) | absValTest == 1))] = 1
+      nightFires[((dayFlag == 0) & ((tests2and3and4 == 1) | test1 == 1))] = 1
 
-    # Sun glint rejection
+    # Sun glint rejection 7 (Giglio 2003, section 2.2.6)
     relAzimuth = allArrays['SensorAzimuth'] - allArrays['SolarAzimuth']
     cosThetaG = (np.cos(allArrays['SensorZenith']) * np.cos(allArrays['SolarZenith'])) - (
       np.sin(allArrays['SensorZenith']) * np.sin(allArrays['SolarZenith']) * np.cos(relAzimuth))
     thetaG = np.arccos(cosThetaG)
     thetaG = (thetaG / 3.141592) * 180
 
-    # Sun glint test 8
+    # Sun glint test 8 (Giglio 2003, section 2.2.6)
     sgTest8 = np.zeros((nRows, nCols), dtype=np.int)
     with np.errstate(invalid='ignore'):
       sgTest8[np.where(thetaG < 2)] = 1
 
-    # Sun glint test 9
+    # Sun glint test 9 (Giglio 2003, section 2.2.6)
     sgTest9 = np.zeros((nRows, nCols), dtype=np.int)
     with np.errstate(invalid='ignore'):
       sgTest9[np.where((thetaG < 8) & (allArrays['BAND1x1k'] > 100) & (allArrays['BAND2x1k'] > 200) & (
         allArrays['BAND7x1k'] > 120))] = 1
 
-    # Sun glint test 10
+    # Sun glint test 10 (Giglio 2003, section 2.2.6)
     waterLoc = np.zeros((nRows, nCols), dtype=np.int)
     with np.errstate(invalid='ignore'):
       waterLoc[np.where(waterMask == waterFlag)] = 1
@@ -549,39 +566,39 @@ cdef process(filMOD02, HDF03, float minLat, float maxLat, float minLon, float ma
     with np.errstate(invalid='ignore'):
       sgAll[(sgTest8 == 1) | (sgTest9 == 1) | (sgTest10 == 1)] = 1
 
-    # Desert boundary rejection
+    # Desert boundary rejection (Giglio 2003, section 2.2.7)
     nValid = runFilt(b22bgMask, nValidFilt, minKsize, maxKsize)
     nRejectedBG = runFilt(bgMask, nRejectBGfireFilt, minKsize, maxKsize)
 
     with np.errstate(invalid='ignore'):
       nRejectedBG[np.where(nRejectedBG < 0)] = 0
 
-    # Desert boundary test 11
+    # Desert boundary test 11 (Giglio 2003, section 2.2.7)
     dbTest11 = np.zeros((nRows, nCols), dtype=np.int)
     with np.errstate(invalid='ignore'):
       dbTest11[np.where(nRejectedBG > (0.1 * nValid))] = 1
 
-    # Desert boundary test 12
+    # Desert boundary test 12 (Giglio 2003, section 2.2.7)
     dbTest12 = np.zeros((nRows, nCols), dtype=np.int)
     with np.errstate(invalid='ignore'):
       dbTest12[(nRejectedBG >= 4)] = 1
 
-    # Desert boundary test 13
+    # Desert boundary test 13 (Giglio 2003, section 2.2.7)
     dbTest13 = np.zeros((nRows, nCols), dtype=np.int)
     with np.errstate(invalid='ignore'):
       dbTest13[np.where(allArrays['BAND2x1k'] > 150)] = 1
 
-    # Desert boundary test 14
+    # Desert boundary test 14 (Giglio 2003, section 2.2.7)
     dbTest14 = np.zeros((nRows, nCols), dtype=np.int)
     with np.errstate(invalid='ignore'):
       dbTest14[(b22rejMeanFilt < 345)] = 1
 
-    # Desert boundary test 15
+    # Desert boundary test 15 (Giglio 2003, section 2.2.7)
     dbTest15 = np.zeros((nRows, nCols), dtype=np.int)
     with np.errstate(invalid='ignore'):
       dbTest15[(b22rejMADfilt < 3)] = 1
 
-    # Desert boundary test 16
+    # Desert boundary test 16 (Giglio 2003, section 2.2.7)
     dbTest16 = np.zeros((nRows, nCols), dtype=np.int)
     with np.errstate(invalid='ignore'):
       dbTest16[(b22CloudWaterMasked < (b22rejMeanFilt + (6 * b22rejMADfilt)))] = 1
@@ -589,9 +606,9 @@ cdef process(filMOD02, HDF03, float minLat, float maxLat, float minLon, float ma
     # Reject anything that fulfills desert boundary criteria
     dbAll = dbTest11 * dbTest12 * dbTest13 * dbTest14 * dbTest15 * dbTest16
 
-    # Coastal false alarm rejection
+    # Coastal false alarm rejection (Giglio 2003, Section 2.2.8)
     with np.errstate(invalid='ignore'):
-      ndvi = (allArrays['BAND2x1k'] + allArrays['BAND1x1k']) / (allArrays['BAND2x1k'] + allArrays['BAND1x1k'])
+      ndvi = (allArrays['BAND2x1k'] - allArrays['BAND1x1k']) / (allArrays['BAND2x1k'] + allArrays['BAND1x1k'])
     unmaskedWater = np.zeros((nRows, nCols), dtype=np.int)
     with np.errstate(invalid='ignore'):
       unmaskedWater[((ndvi < 0) & (allArrays['BAND7x1k'] < 50) & (allArrays['BAND2x1k'] < 150))] = -6
@@ -599,13 +616,14 @@ cdef process(filMOD02, HDF03, float minLat, float maxLat, float minLon, float ma
     Nuw = runFilt(unmaskedWater, nUnmaskedWaterFilt, minKsize, maxKsize)
     rejUnmaskedWater = np.zeros((nRows, nCols), dtype=np.int)
     with np.errstate(invalid='ignore'):
-      rejUnmaskedWater[(absValTest == 0) & (Nuw > 0)] = 1
+      rejUnmaskedWater[(test1 == 0) & (Nuw > 0)] = 1
 
     # Combine all masks
     allFires = dayFires + nightFires  # All potential fires
     with np.errstate(invalid='ignore'):  # Reject sun glint, desert boundary, coastal false alarms
       allFires[(sgAll == 1) | (dbAll == 1) | (rejUnmaskedWater == 1)] = 0
 
+    # If any fires have been detected, calculate Fire Radiative Power (FRP)
     if np.max(allFires) > 0:
 
       b22firesAllMask = allFires * allArrays['BAND22']
@@ -614,10 +632,11 @@ cdef process(filMOD02, HDF03, float minLat, float maxLat, float minLon, float ma
       b22maskEXP = b22firesAllMask.astype(float) ** 8
       b22bgEXP = b22bgAllMask.astype(float) ** 8
 
-      frpMW = 4.34e-19 * (b22maskEXP-b22bgEXP)
+      frpMW = 4.34 * (10 ** (-19)) * (b22maskEXP - b22bgEXP)  # AREA TERM HERE
+
       frpMWabs = frpMW * potFire
 
-      # Detection confidence
+      # Detection confidence (Giglio 2003, Section 2.3)
       cloudLoc = np.zeros((nRows, nCols), dtype=np.int)
       with np.errstate(invalid='ignore'):
         cloudLoc[np.where(cloudMask == cloudFlag)] = 1
@@ -635,12 +654,12 @@ cdef process(filMOD02, HDF03, float minLat, float maxLat, float minLon, float ma
       zDeltaT = (deltaTbgMask - deltaTmeanFilt) / deltaTMADFilt
 
       with np.errstate(invalid='ignore'):
-        firesNclouds = nCloudAdj[(allFires == 1) & (0 < frpMWabs) & (frpMWabs < 3900)]
-        firesZ4 = z4[(allFires == 1) & (0 < frpMWabs) & (frpMWabs < 3900)]
-        firesZdeltaT = zDeltaT[(allFires == 1) & (0 < frpMWabs) & (frpMWabs < 3900)]
-        firesB22bgMask = b22bgMask[(allFires == 1) & (0 < frpMWabs) & (frpMWabs < 3900)]
-        firesNwater = nWaterAdj[(allFires == 1) & (0 < frpMWabs) & (frpMWabs < 3900)]
-        firesDayFlag = dayFlag[(allFires == 1) & (0 < frpMWabs) & (frpMWabs < 3900)]
+        firesNclouds = nCloudAdj[(allFires == 1)]
+        firesZ4 = z4[(allFires == 1)]
+        firesZdeltaT = zDeltaT[(allFires == 1)]
+        firesB22bgMask = b22bgMask[(allFires == 1)]
+        firesNwater = nWaterAdj[(allFires == 1)]
+        firesDayFlag = dayFlag[(allFires == 1)]
 
       # Fire detection confidence test 19
       C1day = rampFn(firesB22bgMask, 310, 340)
@@ -652,10 +671,10 @@ cdef process(filMOD02, HDF03, float minLat, float maxLat, float minLon, float ma
       # Fire detection confidence test 21
       C3 = rampFn(firesZdeltaT, 3, 6)
 
-      # Fire detection confidence test 22
-      C4 = 1 - rampFn(firesNclouds, 0, 6)
+      # Fire detection confidence test 22 - not used for night fires
+      C4 = 1 - rampFn(firesNclouds, 0, 6)  # zero adjacent clouds = zero confidence
 
-      # Fire detection confidence test 23
+      # Fire detection confidence test 23 - not used for night fires
       C5 = 1 - rampFn(firesNwater, 0, 6)
 
       confArrayDay = np.row_stack((C1day, C2, C3, C4, C5))
@@ -669,30 +688,29 @@ cdef process(filMOD02, HDF03, float minLat, float maxLat, float minLon, float ma
         detnConf[firesDayFlag == 0] = detnConfNight
 
       with np.errstate(invalid='ignore'):
-        FRPx = np.where((allFires == 1) & (0 < frpMWabs) & (frpMWabs < 3900))[1]
+        FRPx = np.where((allFires == 1))[1]
         FRPsample = FRPx + min1
-        FRPy = np.where((allFires == 1) & (0 < frpMWabs) & (frpMWabs < 3900))[0]
+        FRPy = np.where((allFires == 1))[0]
         FRPline = FRPy + min0
-        FRPlats = allArrays['LAT'][(allFires == 1) & (0 < frpMWabs) & (frpMWabs < 3900)]
-        FRPlons = allArrays['LON'][(allFires == 1) & (0 < frpMWabs) & (frpMWabs < 3900)]
-        FRPT21 = allArrays['BAND22'][(allFires == 1) & (0 < frpMWabs) & (frpMWabs < 3900)]
-        FRPT31 = allArrays['BAND31'][(allFires == 1) & (0 < frpMWabs) & (frpMWabs < 3900)]
-        FRPMeanT21 = b22meanFilt[(allFires == 1) & (0 < frpMWabs) & (frpMWabs < 3900)]
-        FRPMeanT31 = b31meanFilt[(allFires == 1) & (0 < frpMWabs) & (frpMWabs < 3900)]
-        FRPMeanDT = deltaTmeanFilt[(allFires == 1) & (0 < frpMWabs) & (frpMWabs < 3900)]
-        FRPMADT21 = b22MADfilt[(allFires == 1) & (0 < frpMWabs) & (frpMWabs < 3900)]
-        FRPMADT31 = b31MADfilt[(allFires == 1) & (0 < frpMWabs) & (frpMWabs < 3900)]
-        FRP_MAD_DT = deltaTMADFilt[(allFires == 1) & (0 < frpMWabs) & (frpMWabs < 3900)]
-        FRP_AdjCloud = nCloudAdj[(allFires == 1) & (0 < frpMWabs) & (frpMWabs < 3900)]
-        FRP_AdjWater = nWaterAdj[(allFires == 1) & (0 < frpMWabs) & (frpMWabs < 3900)]
-        FRP_NumValid = nValid[(allFires == 1) & (0 < frpMWabs) & (frpMWabs < 3900)]
+        FRPlats = allArrays['LAT'][(allFires == 1)]
+        FRPlons = allArrays['LON'][(allFires == 1)]
+        FRPT21 = allArrays['BAND22'][(allFires == 1)]
+        FRPT31 = allArrays['BAND31'][(allFires == 1)]
+        FRPMeanT21 = b22meanFilt[(allFires == 1)]
+        FRPMeanT31 = b31meanFilt[(allFires == 1)]
+        FRPMeanDT = deltaTmeanFilt[(allFires == 1)]
+        FRPMADT21 = b22MADfilt[(allFires == 1)]
+        FRPMADT31 = b31MADfilt[(allFires == 1)]
+        FRP_MAD_DT = deltaTMADFilt[(allFires == 1)]
+        FRP_AdjCloud = nCloudAdj[(allFires == 1)]
+        FRP_AdjWater = nWaterAdj[(allFires == 1)]
+        FRP_NumValid = nValid[(allFires == 1)]
         FRP_confidence = detnConf * 100
-        FRPpower = frpMWabs[(allFires == 1) & (0 < frpMWabs) & (frpMWabs < 3900)]
+        FRPpower = frpMWabs[(allFires == 1)]
 
       exportCSV = np.column_stack(
         [FRPline, FRPsample, FRPlats, FRPlons, FRPT21, FRPT31, FRPMeanT21, FRPMeanT31, FRPMeanDT, FRPMADT21, FRPMADT31,
          FRP_MAD_DT, FRPpower, FRP_AdjCloud, FRP_AdjWater, FRP_NumValid, FRP_confidence])
-
       hdr = '"FRPline",' \
             '"FRPsample",' \
             '"FRPlats",' \
