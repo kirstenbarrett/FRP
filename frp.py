@@ -548,10 +548,15 @@ def process(filMOD02, commandLineArgs, cwd):
   datNam = yr + julianDay + '.' + hr + mint
 
   # Get the corresponding 03 HDF
+  filMOD03 = None
   for filNamCandidate in HDF03:
     if datNam in filNamCandidate:
       filMOD03 = filNamCandidate
       break
+
+  # The HDF03 does not exist - exit as we don't process a solitary HDF02
+  if filMOD03 is None:
+    return
 
   # Creates a blank dictionary to hold the full MODIS swaths
   fullArrays = {}
