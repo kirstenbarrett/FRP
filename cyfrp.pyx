@@ -693,9 +693,46 @@ cdef process(filMOD02, HDF03, float minLat, float maxLat, float minLon, float ma
         [FRPline, FRPsample, FRPlats, FRPlons, FRPT21, FRPT31, FRPMeanT21, FRPMeanT31, FRPMeanDT, FRPMADT21, FRPMADT31,
          FRP_MAD_DT, FRPpower, FRP_AdjCloud, FRP_AdjWater, FRP_NumValid, FRP_confidence])
 
-      hdr = '"FRPline","FRPsample","FRPlats","FRPlons","FRPT21","FRPT31","FRPMeanT21","FRPMeanT31","FRPMeanDT","FRPMADT21","FRPMADT31","FRP_MAD_DT","FRPpower","FRP_AdjCloud","FRP_AdjWater","FRP_NumValid","FRP_confidence"'
+      hdr = '"FRPline",' \
+            '"FRPsample",' \
+            '"FRPlats",' \
+            '"FRPlons",' \
+            '"FRPT21",' \
+            '"FRPT31",' \
+            '"FRPMeanT21",' \
+            '"FRPMeanT31",' \
+            '"FRPMeanDT",' \
+            '"FRPMADT21",' \
+            '"FRPMADT31",' \
+            '"FRP_MAD_DT",' \
+            '"FRPpower",' \
+            '"FRP_AdjCloud",' \
+            '"FRP_AdjWater",' \
+            '"FRP_NumValid",' \
+            '"FRP_confidence"'
       os.chdir(cwd)
-      np.savetxt(filMOD02.replace('hdf', '') + "csv", exportCSV, delimiter="\t", header=hdr, fmt="%." + str(decimalPlaces) + "f")
+      np.savetxt(
+        filMOD02.replace('hdf', '') + "csv", exportCSV, delimiter="\t", header=hdr,
+        fmt=[
+          "%d", # line
+          "%d", # sample
+          "%.5f", # lats
+          "%.5f", # lons
+          "%.2f", # t21
+          "%.2f", # t31
+          "%.2f", # mean t21
+          "%.2f", # mean t31
+          "%.2f", # mean dt
+          "%.2f", # mad t21
+          "%.2f", # mad t31
+          "%.2f", # mad dt
+          "%." + str(decimalPlaces) + "f", # power
+          "%d", # cloud
+          "%d", # water
+          "%d", # valid
+          "%.2f" # conf
+        ]
+      )
 
 def run(directory, minLat, maxLat, minLon, maxLon, reductionFactor, minNcount, minNfrac, minKsize, maxKsize, decimalPlaces):
 
