@@ -494,7 +494,6 @@ def process(filMOD02, commandLineArgs, cwd):
   waterFlag = -1
   cloudFlag = -2
   bgFlag = -3
-  datsWdata = []
 
   # Coefficients for radiance calculations
   coeff1 = 119104200
@@ -933,8 +932,6 @@ def process(filMOD02, commandLineArgs, cwd):
 
     # If any fires have been detected, calculate Fire Radiative Power (FRP)
     if np.max(allFires) > 0:
-
-      datsWdata.append(t)
 
       b22firesAllMask = allFires * allArrays['BAND22']
       b22bgAllMask = allFires * b22meanFilt
