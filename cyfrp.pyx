@@ -205,7 +205,6 @@ cdef process(filMOD02, HDF03, float minLat, float maxLat, float minLon, float ma
   cdef float waterFlag = -1
   cdef float cloudFlag = -2
   cdef float bgFlag = -3
-  datsWdata = []
 
   # Coefficients for radiance calculations
   cdef int coeff1 = 119104200
@@ -628,7 +627,6 @@ cdef process(filMOD02, HDF03, float minLat, float maxLat, float minLon, float ma
       allFires[(sgAll == 1) | (dbAll == 1) | (rejUnmaskedWater == 1)] = 0
 
     if np.max(allFires) > 0:
-      datsWdata.append(t)
 
       b22firesAllMask = allFires * allArrays['BAND22']
       b22bgAllMask = allFires * b22meanFilt
