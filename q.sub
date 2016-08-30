@@ -4,10 +4,10 @@
 #PBS -l walltime=00:10:00
 #PBS -q devel
 #PBS -l nodes=1:ppn=8
-#PBS -l vmem=4gb
+#PBS -l vmem=16Gb
 #PBS -t 0-5
-#PBS -o output.txt
-#PBS -e error.txt
+#PBS -o output
+#PBS -e error
 
 module load python/2.7.9
 module load gdal
