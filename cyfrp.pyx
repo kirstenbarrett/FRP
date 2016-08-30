@@ -170,7 +170,8 @@ cdef meanMadFilt(np.ndarray[np.float64_t, ndim=2] rawband, int minKsize, int max
 
     return meanFilt[bSize:-bSize,bSize:-bSize], madFilt[bSize:-bSize,bSize:-bSize]
 
-cdef process(filMOD02, HDF03, float minLat, float maxLat, float minLon, float maxLon, int reductionFactor, int minNcount, float minNfrac, int minKsize, int maxKsize, int decimalPlaces, str cwd):
+cdef process(filMOD02, HDF03, float minLat, float maxLat, float minLon, float maxLon,
+             int reductionFactor, int minNcount, float minNfrac, int minKsize, int maxKsize, int decimalPlaces):
 
   cdef np.ndarray[np.float64_t, ndim=2] dayFlag,waterMask,cloudMask
   cdef np.ndarray[np.float64_t, ndim=2] b21CloudWaterMasked,b22CloudWaterMasked
@@ -448,7 +449,7 @@ cdef process(filMOD02, HDF03, float minLat, float maxLat, float minLon, float ma
       test1[(potFire == 1) & (dayFlag == 0) & (allArrays['BAND22'] > (320 * reductionFactor))] = 1
 
     # Background fire test (Gilio 2003, Section 2.2.3, first paragraph)
-    bgMask = np.zeros((nRows, nCols), dtype=np.int)
+    bgMask = np.zeros((nRows, nCols), dtype=np.float64)
     with np.errstate(invalid='ignore'):
       bgMask[
         (potFire == 1) & (dayFlag == 1) & (allArrays['BAND22'] > (325 * reductionFactor)) & (
@@ -467,18 +468,14 @@ cdef process(filMOD02, HDF03, float minLat, float maxLat, float minLon, float ma
     deltaTbgMask[(potFire == 1) & (bgMask == bgFlag)] = bgFlag
 
     # Mean and mad filters - mad needed for confidence estimation
-    b22meanFilt, b22MADfilt = meanMadFilt(b22bgMask, maxKsize, minKsize, footprintx, footprinty, ksizes, minNcount,
-                                          minNfrac)
+    b22meanFilt, b22MADfilt = meanMadFilt(b22bgMask, minKsize, maxKsize, minNcount, minNfrac, footprintx, footprinty, ksizes)
     b22minusBG = np.copy(b22CloudWaterMasked) - np.copy(b22meanFilt)
-    b31meanFilt, b31MADfilt = meanMadFilt(b31bgMask, maxKsize, minKsize, footprintx, footprinty, ksizes, minNcount,
-                                          minNfrac)
-    deltaTmeanFilt, deltaTMADFilt = meanMadFilt(deltaTbgMask, maxKsize, minKsize, footprintx, footprinty, ksizes,
-                                                minNcount, minNfrac)
+    b31meanFilt, b31MADfilt = meanMadFilt(b31bgMask, minKsize, maxKsize, minNcount, minNfrac, footprintx, footprinty, ksizes)
+    deltaTmeanFilt, deltaTMADFilt = meanMadFilt(deltaTbgMask, minKsize, maxKsize, minNcount, minNfrac, footprintx, footprinty, ksizes)
 
     b22bgRej = np.copy(allArrays['BAND22'])
     b22bgRej[(potFire == 1) & (bgMask != bgFlag)] = bgFlag
-    b22rejMeanFilt, b22rejMADfilt = meanMadFilt(b22bgRej, maxKsize, minKsize, footprintx, footprinty, ksizes, minNcount,
-                                                minNfrac)
+    b22rejMeanFilt, b22rejMADfilt = meanMadFilt(b22bgRej, minKsize, maxKsize, minNcount, minNfrac, footprintx, footprinty, ksizes)
 
     # CONTEXTUAL TESTS - (Giglio 2003, Section 2.2.4)
     # The number associated with each test is the number of the equation in the paper
@@ -721,7 +718,7 @@ cdef process(filMOD02, HDF03, float minLat, float maxLat, float minLon, float ma
             '"FRP_AdjWater",' \
             '"FRP_NumValid",' \
             '"FRP_confidence"'
-      os.chdir(cwd)
+
       np.savetxt(
         filMOD02.replace('hdf', '') + "csv", exportCSV, delimiter="\t", header=hdr,
         fmt=[
@@ -745,10 +742,10 @@ cdef process(filMOD02, HDF03, float minLat, float maxLat, float minLon, float ma
         ]
       )
 
-def run(directory, minLat, maxLat, minLon, maxLon, reductionFactor, minNcount, minNfrac, minKsize, maxKsize, decimalPlaces):
+def run(directory, index, minLat, maxLat, minLon, maxLon, reductionFactor, minNcount, minNfrac, minKsize, maxKsize, decimalPlaces):
 
-  cwd = os.getcwd()
-  os.chdir(directory)
+  os.chdir(directory + "/" + str(index))
   HDF03 = [hdf for hdf in os.listdir('.') if ".hdf" in hdf and "D03" in hdf]
   HDF02 = [hdf for hdf in os.listdir('.') if ".hdf" in hdf and "D02" in hdf]
-  [process(hdf, HDF03, minLat, maxLat, minLon, maxLon, reductionFactor, minNcount, minNfrac, minKsize, maxKsize, decimalPlaces, cwd) for hdf in HDF02]
+  [process(hdf, HDF03, float(minLat), float(maxLat), float(minLon), float(maxLon),
+           int(reductionFactor), int(minNcount), float(minNfrac), int(minKsize), int(maxKsize), int(decimalPlaces)) for hdf in HDF02]
