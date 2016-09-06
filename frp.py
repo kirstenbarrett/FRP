@@ -9,7 +9,6 @@ import math
 import argparse
 import os.path
 import time
-import hdf_ftp
 
 # Start time
 start = time.time()
@@ -129,17 +128,8 @@ parser.add_argument(
   help="Set the directory to load HDF files from default:/",
   default=".", type=str)
 
-# FTP arguments - these must mimic hdf_ftp argparse except for -v
-parser.add_argument("-order", help="the data order id", type=str, nargs='+')
-parser.add_argument("-dl", "--downloadLimit", help="limit the amount of HDF file pairs to download", default=0,
-                    type=int)
-
 # Parse the command line arguments
 args = parser.parse_args()
-
-# We have an FTP order to invoke
-if (args.order):
-  [hdf_ftp.main(order, args.downloadLimit, args.verbose) for order in args.order]
 
 # Argument validation
 if args.minimumLatitude < MIN_MIN_LAT:
