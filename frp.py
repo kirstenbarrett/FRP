@@ -572,10 +572,10 @@ def process(filMOD02, commandLineArgs, cwd):
       B21, B22, B31, B32 = dataMOD02[B21index], dataMOD02[B22index], dataMOD02[B31index], dataMOD02[B32index]
 
       # Create the invalid mask from raw data values
-      invalidMask[(B21 > 65500)] = 1
-      invalidMask[(B22 > 65500)] = 1
-      invalidMask[(B31 > 65500)] = 1
-      invalidMask[(B32 > 65500)] = 1
+      invalidMask[(B21 == 65534)] = 1
+      invalidMask[(B22 == 65534)] = 1
+      invalidMask[(B31 == 65534)] = 1
+      invalidMask[(B32 == 65534)] = 1
 
       B21scale, B22scale, B31scale, B32scale = radScales[B21index], radScales[B22index], radScales[B31index], radScales[
         B32index]
@@ -622,8 +622,8 @@ def process(filMOD02, commandLineArgs, cwd):
       B1, B2 = dataMOD02[B1index], dataMOD02[B2index]
 
       # Create the invalid mask from raw data values
-      invalidMask[(B1 > 65500)] = 1
-      invalidMask[(B2 > 65500)] = 1
+      invalidMask[(B1 == 65534)] = 1
+      invalidMask[(B2 == 65534)] = 1
 
       B1scale, B2scale = refScales[B1index], refScales[B2index]
       B1offset, B2offset = refOffset[B1index], refOffset[B2index]
@@ -655,7 +655,7 @@ def process(filMOD02, commandLineArgs, cwd):
       B7 = dataMOD02[B7index]
 
       # Create the invalid mask from raw data values
-      invalidMask[(B7 > 65500)] = 1
+      invalidMask[(B7 == 65534)] = 1
 
       B7scale, B7offset = refScales[B7index], refOffset[B7index]
       B7 = ((B7 - B7offset) * B7scale) * 1000
