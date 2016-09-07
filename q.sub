@@ -1,11 +1,10 @@
 #!/bin/bash
 
 #PBS -N FRP
-#PBS -l walltime=00:30:00
-#PBS -q devel
+#PBS -l walltime=05:00:00:00
 #PBS -l nodes=1:ppn=8
 #PBS -l vmem=16Gb
-#PBS -t 0-5
+#PBS -t 0-6
 #PBS -o output
 #PBS -e error
 
