@@ -190,7 +190,7 @@ cdef meanMadFilt(np.ndarray[np.float64_t, ndim=2] waterMask, np.ndarray[np.float
     return meanFilt[bSize:-bSize,bSize:-bSize], madFilt[bSize:-bSize,bSize:-bSize]
 
 cdef process(filMOD02, HDF03, float minLat, float maxLat, float minLon, float maxLon,
-             int reductionFactor, int minNcount, float minNfrac, int minKsize, int maxKsize, int decimalPlaces):
+             int reductionFactor, int minNcount, float minNfrac, int minKsize, int maxKsize, int decimalPlaces, str cwd):
 
   cdef np.ndarray[np.float64_t, ndim=2] dayFlag,waterMask,cloudMask
   cdef np.ndarray[np.float64_t, ndim=2] b21CloudWaterMasked,b22CloudWaterMasked
@@ -738,7 +738,7 @@ cdef process(filMOD02, HDF03, float minLat, float maxLat, float minLon, float ma
             '"FRP_AdjWater",' \
             '"FRP_NumValid",' \
             '"FRP_confidence"'
-
+      os.chdir(cwd)
       np.savetxt(
         filMOD02.replace('hdf', '') + "csv", exportCSV, delimiter="\t", header=hdr,
         fmt=[
@@ -764,8 +764,9 @@ cdef process(filMOD02, HDF03, float minLat, float maxLat, float minLon, float ma
 
 def run(directory, index, minLat, maxLat, minLon, maxLon, reductionFactor, minNcount, minNfrac, minKsize, maxKsize, decimalPlaces):
 
+  cwd = os.getcwd()
   os.chdir(directory + "/" + str(index))
   HDF03 = [hdf for hdf in os.listdir('.') if ".hdf" in hdf and "D03" in hdf]
   HDF02 = [hdf for hdf in os.listdir('.') if ".hdf" in hdf and "D02" in hdf]
   [process(hdf, HDF03, float(minLat), float(maxLat), float(minLon), float(maxLon),
-           int(reductionFactor), int(minNcount), float(minNfrac), int(minKsize), int(maxKsize), int(decimalPlaces)) for hdf in HDF02]
+           int(reductionFactor), int(minNcount), float(minNfrac), int(minKsize), int(maxKsize), int(decimalPlaces), cwd) for hdf in HDF02]
