@@ -262,7 +262,7 @@ cdef process(filMOD02, HDF03, float minLat, float maxLat, float minLon, float ma
     this_file = file_template % (filMOD02, layer)
     g = gdal.Open(this_file)
     if g is None:
-      raise IOError
+      return
     metadataMOD02 = g.GetMetadata()
     dataMOD02 = g.ReadAsArray()
 
