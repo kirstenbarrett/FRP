@@ -560,7 +560,7 @@ def process(filMOD02, commandLineArgs, cwd):
     this_file = file_template % (filMOD02, layer)
     g = gdal.Open(this_file)
     if g is None:
-      raise IOError
+      return
     metadataMOD02 = g.GetMetadata()
     dataMOD02 = g.ReadAsArray()
 
