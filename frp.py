@@ -773,7 +773,7 @@ def process(filMOD02, commandLineArgs, cwd):
     test1 = np.zeros((nRows, nCols), dtype=np.int)
     with np.errstate(invalid='ignore'):
       test1[(potFire == 1) & (dayFlag == 1) & (allArrays['BAND22'] > (360 * reductionFactor)) & (invalidMask == 0)] = 1
-      test1[(potFire == 1) & (dayFlag == 0) & (allArrays['BAND22'] > (305 * reductionFactor)) & (invalidMask == 0)] = 1
+      test1[(potFire == 1) & (dayFlag == 0) & (allArrays['BAND22'] > (320 * reductionFactor)) & (invalidMask == 0)] = 1
 
     # Background fire test (Gilio 2003, Section 2.2.3, first paragraph)
     bgMask = np.zeros((nRows, nCols), dtype=np.int)
