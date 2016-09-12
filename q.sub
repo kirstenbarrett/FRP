@@ -7,7 +7,7 @@
 #PBS -t 0-6
 
 module load python/2.7.9
-module load gdal
+module load gdal/1.11.4
 
 cd $PBS_O_WORKDIR
 
