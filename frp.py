@@ -466,7 +466,7 @@ def meanMadFilt(waterMask, rawband, minKsize, maxKsize, footprintx, footprinty, 
 #
 # Main function for processing HDFs
 #
-def process(filMOD02, commandLineArgs, cwd):
+def process(filMOD02, commandLineArgs, cwd, directory):
   minNfrac = commandLineArgs.validFraction
   decimal = commandLineArgs.decimal
   minNcount = commandLineArgs.windowObservations
@@ -1077,13 +1077,14 @@ def process(filMOD02, commandLineArgs, cwd):
             "%.2f" # conf
           ]
         )
+        os.chdir(directory)
 
 # HDFs
 cwd = os.getcwd()
 os.chdir(args.directory)
 HDF03 = [hdf for hdf in os.listdir('.') if ".hdf" in hdf and "D03" in hdf]
 HDF02 = [hdf for hdf in os.listdir('.') if ".hdf" in hdf and "D02" in hdf]
-[process(hdf02, args, cwd) for hdf02 in HDF02]
+[process(hdf02, args, cwd, args.directory) for hdf02 in HDF02]
 
 # End time
 end = time.time()
