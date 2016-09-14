@@ -998,15 +998,18 @@ def process(filMOD02, commandLineArgs, cwd, directory):
       # Fire detection confidence test 23 - not used for night fires
       C5 = 1 - rampFn(firesNwater, 0, 6)
 
+      # Detection confidence for the daytime
       confArrayDay = np.row_stack((C1day, C2, C3, C4, C5))
       detnConfDay = gmean(confArrayDay, axis=0)
 
+      # Detection confidence for the nighttime
       confArrayNight = np.row_stack((C1night, C2, C3))
       detnConfNight = gmean(confArrayNight, axis=0)
 
-      detnConf = detnConfDay
-      if 0 in firesDayFlag:
-        detnConf[firesDayFlag == 0] = detnConfNight
+      # Detection confidence for both day and night
+      detnConf = np.zeros_like(detnConfDay, dtype=np.float)
+      detnConf[firesDayFlag == 1] = detnConfDay[firesDayFlag == 1]
+      detnConf[firesDayFlag == 0] = detnConfNight[firesDayFlag == 0]
 
       with np.errstate(invalid='ignore'):
         FRPx = np.where((allFires == 1))[1]
