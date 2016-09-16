@@ -649,6 +649,7 @@ cdef process(filMOD02, HDF03, float minLat, float maxLat, float minLon, float ma
       b22bgEXP = b22bgAllMask.astype(float) ** 8
 
       frpMW = 4.34 * (10 ** (-19)) * (b22maskEXP - b22bgEXP)
+      frpMWabs = frpMW * potFire
 
       # Detection confidence (Giglio 2003, Section 2.3)
       cloudLoc = np.zeros((nRows, nCols), dtype=np.int)
@@ -723,7 +724,7 @@ cdef process(filMOD02, HDF03, float minLat, float maxLat, float minLon, float ma
         FRP_AdjWater = nWaterAdj[(allFires == 1)]
         FRP_NumValid = nValid[(allFires == 1)]
         FRP_confidence = detnConf * 100
-        FRPpower = frpMW[(allFires == 1)]
+        FRPpower = frpMWabs[(allFires == 1)]
 
       exportCSV = np.column_stack(
         [FRPline, FRPsample, FRPlats, FRPlons, FRPT21, FRPT31, FRPMeanT21, FRPMeanT31, FRPMeanDT, FRPMADT21, FRPMADT31,
