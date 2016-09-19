@@ -9,6 +9,9 @@ from scipy.stats import gmean
 import math
 cimport numpy as np
 
+#
+# Finds the number of adjacent cloud pixels
+#
 cdef adjCloud(kernel):
 
   nghbors = kernel[range(0, 4) + range(5, 9)]
@@ -16,6 +19,9 @@ cdef adjCloud(kernel):
   cdef int nCloudNghbr = len(cloudNghbors)
   return nCloudNghbr
 
+#
+# Finds the number of adjacent water pixels
+#
 cdef adjWater(kernel):
 
   nghbors = kernel[range(0, 4) + range(5, 9)]
@@ -23,15 +29,22 @@ cdef adjWater(kernel):
   cdef int nWaterNghbr = len(waterNghbors)
   return nWaterNghbr
 
+#
+# Creates a mask for context tests (must ignore pixels immediately to the right and left of center)
+#
 cdef makeFootprint(int kSize):
 
   cdef float fpZeroLine = (kSize - 1) / 2
   cdef float fpZeroColStart = fpZeroLine - 1
   cdef float fpZeroColEnd = fpZeroColStart + 3
+
   fp = np.ones((kSize, kSize), dtype='int_')
   fp[fpZeroLine, fpZeroColStart:fpZeroColEnd] = -5
   return fp
 
+#
+# Returns the number of valid (non-background fire, non-cloud, non-water) neighbors for context tests
+#
 cdef nValidFilt(kernel, int kSize, int minKsize, int maxKsize):
 
   cdef int nghbrCnt = -4
@@ -47,6 +60,9 @@ cdef nValidFilt(kernel, int kSize, int minKsize, int maxKsize):
 
   return nghbrCnt
 
+#
+# Returns the number of neighbors rejected as background fires
+#
 cdef nRejectBGfireFilt(kernel, int kSize, int minKsize, int maxKsize):
 
   cdef int nRejectBGfire = -4
@@ -58,6 +74,9 @@ cdef nRejectBGfireFilt(kernel, int kSize, int minKsize, int maxKsize):
 
   return nRejectBGfire
 
+#
+# Returns number of neighbors rejected as water
+#
 cdef nRejectWaterFilt(kernel, int kSize, int minKsize, int maxKsize):
 
   cdef int nRejectWater = -4
@@ -70,6 +89,24 @@ cdef nRejectWaterFilt(kernel, int kSize, int minKsize, int maxKsize):
 
   return nRejectWater
 
+#
+# Return the number of neighbours rejected as coastline
+#
+cdef nRejectCoastFilt(kernel, kSize, minKsize, maxKsize):
+
+  cdef int nRejecCoast = -4
+  kernel = kernel.reshape((kSize, kSize))
+
+  centerVal = kernel[((kSize - 1) / 2), ((kSize - 1) / 2)]
+
+  if (kSize == minKsize) | (centerVal == -4):
+    nRejecCoast = len(kernel[np.where(kernel == -3.5)])
+
+  return nRejecCoast
+
+#
+# Returns the number of 'unmasked water' neighbors
+#
 cdef nUnmaskedWaterFilt(kernel, int kSize, int minKsize, int maxKsize):
 
   cdef int nUnmaskedWater = -4
@@ -82,6 +119,9 @@ cdef nUnmaskedWaterFilt(kernel, int kSize, int minKsize, int maxKsize):
 
   return nUnmaskedWater
 
+#
+# Generic ramp function used to calculate detection confidence
+#
 cdef rampFn(band, rampMin, rampMax):
 
   cdef float conf = 0
@@ -94,6 +134,9 @@ cdef rampFn(band, rampMin, rampMax):
     confVals.append(conf)
   return np.asarray(confVals)
 
+#
+# Runs filters on progressively larger kernel sizes and then combines the result from the smallest kSize
+#
 cdef runFilt(band, filtFunc, int minKsize, int maxKsize):
 
   filtBand = band
@@ -115,6 +158,11 @@ cdef runFilt(band, filtFunc, int minKsize, int maxKsize):
 
   return bandFilt
 
+#
+# Calculates mean and mean absolute deviation (MAD) of neighbouring pixels in a given band
+# Valid neighbouring pixels must match the waterMask state of the corresponding waterMask center pixel
+# Is used when both mean and MAD is required
+#
 cdef meanMadFilt(np.ndarray[np.float64_t, ndim=2] waterMask, np.ndarray[np.float64_t, ndim=2] rawband, int minKsize, int maxKsize, minNcount, float minNfrac, footprintx, footprinty, ksizes):
 
     cdef int sizex, sizey, bSize, padsizex, padsizey, i, x, y, nmin, nn
@@ -189,6 +237,9 @@ cdef meanMadFilt(np.ndarray[np.float64_t, ndim=2] waterMask, np.ndarray[np.float
 
     return meanFilt[bSize:-bSize,bSize:-bSize], madFilt[bSize:-bSize,bSize:-bSize]
 
+#
+# Main function for processing HDFs
+#
 cdef process(filMOD02, HDF03, float minLat, float maxLat, float minLon, float maxLon,
              int reductionFactor, int minNcount, float minNfrac, int minKsize, int maxKsize, int decimal,
              str cwd, str hdfDir):
@@ -202,11 +253,13 @@ cdef process(filMOD02, HDF03, float minLat, float maxLat, float minLon, float ma
   cdef np.ndarray[np.float64_t, ndim=2] deltaTmeanFilt, deltaTMADFilt
   cdef np.ndarray[np.float64_t, ndim=2] b22rejMeanFilt,b22rejMADfilt
 
+  # Value at which Band 22 saturates (L. Giglio, personal communication)
   cdef float b22saturationVal = 331
   cdef float increaseFactor = 1 + (1 - reductionFactor)
   cdef float waterFlag = -1
   cdef float cloudFlag = -2
   cdef float bgFlag = -3
+  cdef float coastFlag = -3.5
 
   # Coefficients for radiance calculations
   cdef int coeff1 = 119104200
@@ -324,12 +377,14 @@ cdef process(filMOD02, HDF03, float minLat, float maxLat, float minLon, float ma
       B21 = (B21 - B21offset) * B21scale
       T21 = coeff2 / (lambda21and22 * (np.log(coeff1 / (((math.pow(lambda21and22, 5)) * B21) + 1))))
       T21corr = 1.00009 * T21 - 0.05167
-      fullArrays['BAND21'] = T21corr
+      fullArrays['BAND21'] = T21corr #temperature
+      fullArrays['R21'] = B21 #radiance
 
       B22 = (B22 - B22offset) * B22scale
       T22 = coeff2 / (lambda21and22 * (np.log(coeff1 / (((math.pow(lambda21and22, 5)) * B22) + 1))))
       T22corr = 1.00010 * T22 - 0.05332
-      fullArrays['BAND22'] = T22corr
+      fullArrays['BAND22'] = T22corr #temp
+      fullArrays['R22'] = B22  #radiance
 
       B31 = (B31 - B31offset) * B31scale
       T31 = coeff2 / (lambda31 * (np.log(coeff1 / (((math.pow(lambda31, 5)) * B31) + 1))))
@@ -432,79 +487,87 @@ cdef process(filMOD02, HDF03, float minLat, float maxLat, float minLon, float ma
     max1 = np.max(boundCrds1)
 
     # Creates a blank dictionary to hold the cropped MODIS data
-    allArrays = {}  # Clipped to min/max lat/long
+    croppedArrays = {}  # Clipped to min/max lat/long
     for b in fullArrays.keys():
       cropB = fullArrays[b][min0:max0, min1:max1]
-      allArrays[b] = cropB
+      croppedArrays[b] = cropB
 
     # Crop the invalid mask
     invalidMask = invalidMask[min0:max0, min1:max1]
 
-    [nRows, nCols] = np.shape(allArrays['BAND22'])
+    [nRows, nCols] = np.shape(croppedArrays['BAND22'])
 
-    # Test for b22 saturation - replace with values from B21
-    allArrays['BAND22'][np.where(allArrays['BAND22'] >= b22saturationVal)] = allArrays['BAND21'][
-      np.where(allArrays['BAND22'] >= b22saturationVal)]
+    # Test for B22 saturation - replace with values from B21
+    croppedArrays['BAND22'][np.where(croppedArrays['BAND22'] >= b22saturationVal)] = croppedArrays['BAND21'][
+      np.where(croppedArrays['BAND22'] >= b22saturationVal)]
+
+    # Test for R22 saturation - replace with values from R21
+    croppedArrays['R22'][np.where(croppedArrays['BAND22'] >= b22saturationVal)] = croppedArrays['R21'][
+      np.where(croppedArrays['BAND22'] >= b22saturationVal)]
 
     # Day/Night flag (Giglio, 2016 Section 3.2)
     dayFlag = np.zeros((nRows, nCols), dtype=np.float64)
-    dayFlag[np.where(allArrays['SolarZenith'] < 8500)] = 1
+    dayFlag[np.where(croppedArrays['SolarZenith'] < 8500)] = 1
 
     # Create water mask
     waterMask = np.zeros((nRows, nCols), dtype=np.float64)
-    waterMask[np.where(allArrays['LANDMASK'] != 1)] = waterFlag
+    waterMask[np.where(croppedArrays['LANDMASK'] != 1)] = waterFlag
 
     # Create cloud mask (Giglio, 2016 Section 3.2)
     cloudMask = np.zeros((nRows, nCols), dtype=np.float64)
-    cloudMask[((allArrays['BAND1x1k'] + allArrays['BAND2x1k']) > 1200)] = cloudFlag
-    cloudMask[(allArrays['BAND32'] < 265)] = cloudFlag
-    cloudMask[((allArrays['BAND1x1k'] + allArrays['BAND2x1k']) > 700) & (allArrays['BAND32'] < 285)] = cloudFlag
+    cloudMask[((croppedArrays['BAND1x1k'] + croppedArrays['BAND2x1k']) > 1200)] = cloudFlag
+    cloudMask[(croppedArrays['BAND32'] < 265)] = cloudFlag
+    cloudMask[((croppedArrays['BAND1x1k'] + croppedArrays['BAND2x1k']) > 700) & (croppedArrays['BAND32'] < 285)] = cloudFlag
 
     cloudMask2 = np.zeros((nRows, nCols), dtype=np.int)
-    cloudMask2[(allArrays['BAND2x1k'] > 250) & (allArrays['BAND32'] < 300)] = cloudFlag
+    cloudMask2[(croppedArrays['BAND2x1k'] > 250) & (croppedArrays['BAND32'] < 300)] = cloudFlag
     cloudMask2[np.where(waterMask == waterFlag)] = cloudFlag
 
     cloudMask[(cloudMask == cloudFlag) & (cloudMask2 == cloudFlag)] = cloudFlag
 
     # Mask clouds and water from input bands
-    b21CloudWaterMasked = np.copy(allArrays['BAND21'])  # ONLY B21
+    b21CloudWaterMasked = np.copy(croppedArrays['BAND21'])  # ONLY B21
     b21CloudWaterMasked[np.where(waterMask == waterFlag)] = waterFlag
     b21CloudWaterMasked[np.where(cloudMask == cloudFlag)] = cloudFlag
 
-    b22CloudWaterMasked = np.copy(allArrays['BAND22'])  # HAS B21 VALS WHERE B22 SATURATED
+    b22CloudWaterMasked = np.copy(croppedArrays['BAND22'])  # HAS B21 VALS WHERE B22 SATURATED
     b22CloudWaterMasked[np.where(waterMask == waterFlag)] = waterFlag
     b22CloudWaterMasked[np.where(cloudMask == cloudFlag)] = cloudFlag
 
-    b31CloudWaterMasked = np.copy(allArrays['BAND31'])
+    b31CloudWaterMasked = np.copy(croppedArrays['BAND31'])
     b31CloudWaterMasked[np.where(waterMask == waterFlag)] = waterFlag
     b31CloudWaterMasked[np.where(cloudMask == cloudFlag)] = cloudFlag
 
-    deltaT = np.abs(allArrays['BAND22'] - allArrays['BAND31'])
+    deltaT = np.abs(croppedArrays['BAND22'] - croppedArrays['BAND31'])
     deltaTCloudWaterMasked = np.copy(deltaT)
     deltaTCloudWaterMasked[np.where(waterMask == waterFlag)] = waterFlag
     deltaTCloudWaterMasked[np.where(cloudMask == cloudFlag)] = cloudFlag
 
+    # Create coastal mask
+    coastalMask = np.zeros((nRows, nCols), dtype=np.float64)
+    coastalMask[croppedArrays['LANDMASK'] == 2] = coastFlag
+
     # Potential fire test (Giglio 2016, Section 3.3)
     potFire = np.zeros((nRows, nCols), dtype=np.int)
     with np.errstate(invalid='ignore'):
-      potFire[(dayFlag == 1) & (allArrays['BAND22'] > (310 * reductionFactor)) & (deltaT > (10 * reductionFactor)) & (
-        allArrays['BAND2x1k'] < (300 * increaseFactor)) & (invalidMask == 0)] = 1
-      potFire[(dayFlag == 0) & (allArrays['BAND22'] > (305 * reductionFactor)) & (deltaT > (10 * reductionFactor)) & (invalidMask == 0)] = 1
+      potFire[(dayFlag == 1) & (croppedArrays['BAND22'] > (310 * reductionFactor)) & (deltaT > (10 * reductionFactor)) & (
+        croppedArrays['BAND2x1k'] < (300 * increaseFactor)) & (invalidMask == 0)] = 1
+      potFire[(dayFlag == 0) & (croppedArrays['BAND22'] > (305 * reductionFactor)) & (deltaT > (10 * reductionFactor)) & (invalidMask == 0)] = 1
 
     # Absolute threshold test 1 [not contextual]
     test1 = np.zeros((nRows, nCols), dtype=np.int)
     with np.errstate(invalid='ignore'):
-      test1[(potFire == 1) & (dayFlag == 1) & (allArrays['BAND22'] > (360 * reductionFactor)) & (invalidMask == 0)] = 1
-      test1[(potFire == 1) & (dayFlag == 0) & (allArrays['BAND22'] > (320 * reductionFactor)) & (invalidMask == 0)] = 1
+      test1[(potFire == 1) & (dayFlag == 1) & (croppedArrays['BAND22'] > (360 * reductionFactor)) & (invalidMask == 0)] = 1
+      test1[(potFire == 1) & (dayFlag == 0) & (croppedArrays['BAND22'] > (320 * reductionFactor)) & (invalidMask == 0)] = 1
 
     # Background fire test (Gilio 2003, Section 2.2.3, first paragraph)
     bgMask = np.zeros((nRows, nCols), dtype=np.float64)
     with np.errstate(invalid='ignore'):
       bgMask[
-        (potFire == 1) & (dayFlag == 1) & (allArrays['BAND22'] > (325 * reductionFactor)) & (
+        (potFire == 1) & (dayFlag == 1) & (croppedArrays['BAND22'] > (325 * reductionFactor)) & (
         deltaT > (20 * reductionFactor)) & (invalidMask == 0)] = bgFlag
       bgMask[
-        (potFire == 1) & (dayFlag == 0) & (allArrays['BAND22'] > (310 * reductionFactor)) & (
+        (potFire == 1) & (dayFlag == 0) & (croppedArrays['BAND22'] > (310 * reductionFactor)) & (
         deltaT > (10 * reductionFactor)) & (invalidMask == 0)] = bgFlag
 
     b22bgMask = np.copy(b22CloudWaterMasked)
@@ -522,7 +585,7 @@ cdef process(filMOD02, HDF03, float minLat, float maxLat, float minLon, float ma
     b31meanFilt, b31MADfilt = meanMadFilt(waterMask, b31bgMask, minKsize, maxKsize, minNcount, minNfrac, footprintx, footprinty, ksizes)
     deltaTmeanFilt, deltaTMADFilt = meanMadFilt(waterMask, deltaTbgMask, minKsize, maxKsize, minNcount, minNfrac, footprintx, footprinty, ksizes)
 
-    b22bgRej = np.copy(allArrays['BAND22'])
+    b22bgRej = np.copy(croppedArrays['BAND22'])
     b22bgRej[(potFire == 1) & (bgMask != bgFlag)] = bgFlag
     b22rejMeanFilt, b22rejMADfilt = meanMadFilt(waterMask, b22bgRej, minKsize, maxKsize, minNcount, minNfrac, footprintx, footprinty, ksizes)
 
@@ -571,24 +634,23 @@ cdef process(filMOD02, HDF03, float minLat, float maxLat, float minLon, float ma
       nightFires[(potFire == 1) & ((dayFlag == 0) & ((tests2and3and4 == 1) | test1 == 1)) & (invalidMask == 0)] = 1
 
     # Sun glint rejection 7 (Giglio 2003, section 3.6.1)
-    relAzimuth = allArrays['SensorAzimuth'] - allArrays['SolarAzimuth']
-    cosThetaG = (np.cos(allArrays['SensorZenith']) * np.cos(allArrays['SolarZenith'])) - (
-      np.sin(allArrays['SensorZenith']) * np.sin(allArrays['SolarZenith']) * np.cos(relAzimuth))
+    relAzimuth = croppedArrays['SensorAzimuth'] - croppedArrays['SolarAzimuth']
+    cosThetaG = (np.cos(croppedArrays['SensorZenith']) * np.cos(croppedArrays['SolarZenith'])) - (
+      np.sin(croppedArrays['SensorZenith']) * np.sin(croppedArrays['SolarZenith']) * np.cos(relAzimuth))
     thetaG = np.arccos(cosThetaG)
     thetaG = (thetaG / 3.141592) * 180
+
+    sgTest7 = np.zeros((nRows, nCols), dtype=np.int)
+    with np.errstate(invalid='ignore'):
+      sgTest7[(potFire == 1) & (thetaG < 2)] = 1
 
     # Sun glint test 8 (Giglio 2016, section 3.6.1)
     sgTest8 = np.zeros((nRows, nCols), dtype=np.int)
     with np.errstate(invalid='ignore'):
-      sgTest8[(potFire == 1) & (thetaG < 2)] = 1
+      sgTest8[(potFire == 1) & ((thetaG < 10) & (croppedArrays['BAND1x1k'] > 120) & (croppedArrays['BAND2x1k'] > 200)) & (
+        croppedArrays['BAND7x1k'] > 120) & (invalidMask == 0)] = 1
 
     # Sun glint test 9 (Giglio 2016, section 3.6.1)
-    sgTest9 = np.zeros((nRows, nCols), dtype=np.int)
-    with np.errstate(invalid='ignore'):
-      sgTest9[(potFire == 1) & ((thetaG < 8) & (allArrays['BAND1x1k'] > 100) & (allArrays['BAND2x1k'] > 200)) & (
-        allArrays['BAND7x1k'] > 120) & (invalidMask == 0)] = 1
-
-    # Sun glint test 10 (Giglio 2016, section 3.6.1)
     waterLoc = np.zeros((nRows, nCols), dtype=np.int)
     with np.errstate(invalid='ignore'):
       waterLoc[(potFire == 1) & (waterMask == waterFlag)] = 1
@@ -597,13 +659,13 @@ cdef process(filMOD02, HDF03, float minLat, float maxLat, float minLon, float ma
     with np.errstate(invalid='ignore'):
       nRejectedWater[(potFire == 1) & (nRejectedWater < 0) & (invalidMask == 0)] = 0
 
-    sgTest10 = np.zeros((nRows, nCols), dtype=np.int)
+    sgTest9 = np.zeros((nRows, nCols), dtype=np.int)
     with np.errstate(invalid='ignore'):
-      sgTest10[(potFire == 1) & ((thetaG < 12) & ((nWaterAdj + nRejectedWater) > 0)) & (invalidMask == 0)] = 1
+      sgTest9[(potFire == 1) & ((thetaG < 15) & ((nWaterAdj + nRejectedWater) > 0)) & (invalidMask == 0)] = 1
 
     sgAll = np.zeros((nRows, nCols), dtype=np.int)
     with np.errstate(invalid='ignore'):
-      sgAll[(sgTest8 == 1) | (sgTest9 == 1) | (sgTest10 == 1)] = 1
+      sgAll[(sgTest7 == 1) | (sgTest8 == 1) | (sgTest9 == 1)] = 1
 
     # Desert boundary rejection (Giglio 2003, section 2.2.7)
     nValid = runFilt(b22bgMask, nValidFilt, minKsize, maxKsize)
@@ -625,7 +687,7 @@ cdef process(filMOD02, HDF03, float minLat, float maxLat, float minLon, float ma
     # Desert boundary test 13 (Giglio 2003, section 2.2.7)
     dbTest13 = np.zeros((nRows, nCols), dtype=np.int)
     with np.errstate(invalid='ignore'):
-      dbTest13[(potFire == 1) & (allArrays['BAND2x1k'] > 150) & (invalidMask == 0)] = 1
+      dbTest13[(potFire == 1) & (croppedArrays['BAND2x1k'] > 150) & (invalidMask == 0)] = 1
 
     # Desert boundary test 14 (Giglio 2003, section 2.2.7)
     dbTest14 = np.zeros((nRows, nCols), dtype=np.int)
@@ -647,35 +709,92 @@ cdef process(filMOD02, HDF03, float minLat, float maxLat, float minLon, float ma
 
     # Coastal false alarm rejection (Giglio 2003, Section 2.2.8)
     with np.errstate(invalid='ignore'):
-      ndvi = (allArrays['BAND2x1k'] - allArrays['BAND1x1k']) / (allArrays['BAND2x1k'] + allArrays['BAND1x1k'])
+      ndvi = (croppedArrays['BAND2x1k'] - croppedArrays['BAND1x1k']) / (croppedArrays['BAND2x1k'] + croppedArrays['BAND1x1k'])
     unmaskedWater = np.zeros((nRows, nCols), dtype=np.int)
     with np.errstate(invalid='ignore'):
-      unmaskedWater[(potFire == 1) & ((ndvi < 0) & (allArrays['BAND7x1k'] < 50) & (allArrays['BAND2x1k'] < 150))] = -6
+      unmaskedWater[(potFire == 1) & ((ndvi < 0) & (croppedArrays['BAND7x1k'] < 50) & (croppedArrays['BAND2x1k'] < 150))] = -6
       unmaskedWater[(potFire == 1) & (bgMask == bgFlag)] = bgFlag
     Nuw = runFilt(unmaskedWater, nUnmaskedWaterFilt, minKsize, maxKsize)
     rejUnmaskedWater = np.zeros((nRows, nCols), dtype=np.int)
     with np.errstate(invalid='ignore'):
       rejUnmaskedWater[(potFire == 1) & ((test1 == 0) & (Nuw > 0)) & (invalidMask == 0)] = 1
 
+    # Forest clearing rejection (Giglio 2016, 3.6.4)
+    fcRej = np.zeros((nRows, nCols), dtype=np.int)
+    fcRej[(dayFires == 1) & (waterMask != waterFlag) & (b31CloudWaterMasked > (b31meanFilt + (3.7 * b31MADfilt)))
+          & (croppedArrays['BAND2x1k'] > 280) & (b22CloudWaterMasked < 325)
+          & (invalidMask == 0)] = 1
+
+    # Water pixel coastal rejection (Giglio 2016, 3.6.5)
+
+    # Land pixels excluded from the background
+    excludedLand = np.zeros((nRows, nCols), dtype=np.int)
+    excludedLand[(waterMask != waterFlag)] = bgFlag
+    # Get excluded land for the contextual window
+    NL = runFilt(excludedLand, nRejectBGfireFilt, minKsize, maxKsize)
+
+    # Allow all fires which lie over water where NL is less than 0
+    NL[(potFire == 1) & (waterMask == waterFlag) & (NL < 0) & (invalidMask == 0)] = 0
+
+    # Number of coast pixels (always excluded) within the contextual window
+    Nc = runFilt(coastalMask, nRejectCoastFilt, minKsize, maxKsize)
+    with np.errstate(invalid='ignore'):
+      Nc[(potFire == 1) & (Nc < 0) & (invalidMask == 0)] = 0
+
+    # Reject any tentative fire pixel detected over water for which NL + Nc > 0 and test (1) is not satisfied
+    wpcRej = np.zeros((nRows, nCols), dtype=np.int)
+    wpcRej[(potFire == 1) & (NL + Nc > 0) & (test1 == 0) & (invalidMask == 0)] = 1
+
     # Combine all masks
     allFires = dayFires + nightFires  # All potential fires
-    with np.errstate(invalid='ignore'):  # Reject sun glint, desert boundary, coastal false alarms
-      allFires[(sgAll == 1) | (dbAll == 1) | (rejUnmaskedWater == 1)] = 0
+    with np.errstate(invalid='ignore'):  # Reject all from rejection testing output
+      allFires[(sgAll == 1) | (dbAll == 1) | (rejUnmaskedWater == 1) | (fcRej == 1) | (wpcRej == 1)] = 0
 
     # If any fires have been detected, calculate Fire Radiative Power (FRP)
     if np.max(allFires) > 0:
 
-      b22firesAllMask = allFires * allArrays['BAND22']
-      b22bgAllMask = allFires * b22meanFilt
+      ##################
+      ##AREA CALCULATION
+      ##################
+      ##S = (I-hp)/H
+      ##
+      ##where:
+      ##
+      ##I is the zero-based pixel index
+      ##hp is 1/2 the total number of pixels (zero-based)
+      ##    (for MODIS each scan is 1354 "1km" pixels, 1353 zero-based, so hp = 676.5)
+      ##H is the sensor altitude divided by the pixel size
+      ##    (for MODIS altitude is approximately 700km, so for "1km" pixels, H = 700/1)
 
-      b22maskEXP = b22firesAllMask.astype(float) ** 8
-      b22bgEXP = b22bgAllMask.astype(float) ** 8
+      I = np.indices((nRows, nCols))[1]
+      hp = 676.6
+      H = 700
 
-      frpMW = 4.34 * (10 ** (-19)) * (b22maskEXP - b22bgEXP)  # AREA TERM HERE
+      S = (I - hp) / H
 
-      frpMWabs = frpMW * potFire
+      ##Compute the zenith angle:
+      Z = np.arcsin(1.111 * np.sin(S))
 
-      # Detection confidence (Giglio 2003, Section 2.3)
+      ##Compute the Along-track pixel size:
+      Pn = 1  # Pixel size in km at nadir
+      Pt = Pn * 9 * np.sin(Z - S) / np.sin(S)
+
+      ##Compute the Along-scan pixel size:
+      Ps = Pt / np.cos(Z)
+
+      areaKmSq = Pt * Ps
+
+      # FRP equation 16 (Giglio 2016, Section 3.8)
+
+      StBo = 5.6704 * (10 ** (-8)) #Stephan Boltzmann constant
+      alpha = 3.0 * (10 ** (-9))
+      tau4 = 1
+
+      R22meanFilt, notNeeded = meanMadFilt(waterMask, croppedArrays['R22'], maxKsize, minKsize, footprintx, footprinty, ksizes, minNcount, minNfrac)
+
+      # For all pixels not just fires
+      FRP2016 = ((areaKmSq * StBo) / (alpha * tau4)) * (croppedArrays['R22'] - R22meanFilt)
+
       cloudLoc = np.zeros((nRows, nCols), dtype=np.int)
       with np.errstate(invalid='ignore'):
         cloudLoc[cloudMask == cloudFlag] = 1
@@ -734,10 +853,10 @@ cdef process(filMOD02, HDF03, float minLat, float maxLat, float minLon, float ma
         FRPsample = FRPx + min1
         FRPy = np.where((allFires == 1))[0]
         FRPline = FRPy + min0
-        FRPlats = allArrays['LAT'][(allFires == 1)]
-        FRPlons = allArrays['LON'][(allFires == 1)]
-        FRPT21 = allArrays['BAND22'][(allFires == 1)]
-        FRPT31 = allArrays['BAND31'][(allFires == 1)]
+        FRPlats = croppedArrays['LAT'][(allFires == 1)]
+        FRPlons = croppedArrays['LON'][(allFires == 1)]
+        FRPT21 = croppedArrays['BAND22'][(allFires == 1)]
+        FRPT31 = croppedArrays['BAND31'][(allFires == 1)]
         FRPMeanT21 = b22meanFilt[(allFires == 1)]
         FRPMeanT31 = b31meanFilt[(allFires == 1)]
         FRPMeanDT = deltaTmeanFilt[(allFires == 1)]
@@ -748,7 +867,7 @@ cdef process(filMOD02, HDF03, float minLat, float maxLat, float minLon, float ma
         FRP_AdjWater = nWaterAdj[(allFires == 1)]
         FRP_NumValid = nValid[(allFires == 1)]
         FRP_confidence = detnConf * 100
-        FRPpower = frpMWabs[(allFires == 1)]
+        FRPpower = FRP2016[(allFires == 1)]
 
       exportCSV = np.column_stack(
         [FRPline, FRPsample, FRPlats, FRPlons, FRPT21, FRPT31, FRPMeanT21, FRPMeanT31, FRPMeanDT, FRPMADT21, FRPMADT31,
