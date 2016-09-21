@@ -236,26 +236,14 @@ if args.verbose:
   print("Decimal output set to", args.decimal)
   print("HDF loading directory set to", args.directory)
 
-
 #
-# Finds the number of adjacent cloud pixels
+# Finds the number of adjacent values in the input array whose value is 1
 #
-def adjCloud(kernel):
+def adj(kernel):
   nghbors = kernel[range(0, 4) + range(5, 9)]
   cloudNghbors = kernel[np.where(nghbors == 1)]
   nCloudNghbr = len(cloudNghbors)
   return nCloudNghbr
-
-
-#
-# Finds the number of adjacent water pixels
-#
-def adjWater(kernel):
-  nghbors = kernel[range(0, 4) + range(5, 9)]
-  waterNghbors = kernel[np.where(nghbors == 1)]
-  nWaterNghbr = len(waterNghbors)
-  return nWaterNghbr
-
 
 #
 # Creates a mask for context tests (must ignore pixels immediately to the right and left of center)
@@ -853,7 +841,7 @@ def process(filMOD02, commandLineArgs, cwd, directory):
     waterLoc = np.zeros((nRows, nCols), dtype=np.int)
     with np.errstate(invalid='ignore'):
       waterLoc[(potFire == 1) & (waterMask == waterFlag)] = 1
-    nWaterAdj = ndimage.generic_filter(waterLoc, adjWater, size=3)
+    nWaterAdj = ndimage.generic_filter(waterLoc, adj, size=3)
     nRejectedWater = runFilt(waterMask, nRejectWaterFilt, minKsize, maxKsize)
     with np.errstate(invalid='ignore'):
       nRejectedWater[(potFire == 1) & (nRejectedWater < 0) & (invalidMask == 0)] = 0
@@ -938,12 +926,12 @@ def process(filMOD02, commandLineArgs, cwd, directory):
       cloudLoc = np.zeros((nRows, nCols), dtype=np.int)
       with np.errstate(invalid='ignore'):
         cloudLoc[cloudMask == cloudFlag] = 1
-      nCloudAdj = ndimage.generic_filter(cloudLoc, adjCloud, size=3)
+      nCloudAdj = ndimage.generic_filter(cloudLoc, adj, size=3)
 
       waterLoc = np.zeros((nRows, nCols), dtype=np.int)
       with np.errstate(invalid='ignore'):
         waterLoc[waterMask == waterFlag] = 1
-      nWaterAdj = ndimage.generic_filter(waterLoc, adjWater, size=3)
+      nWaterAdj = ndimage.generic_filter(waterLoc, adj, size=3)
 
       # Fire detection confidence test 17
       z4 = b22minusBG / b22MADfilt
