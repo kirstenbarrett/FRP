@@ -10,24 +10,14 @@ import math
 cimport numpy as np
 
 #
-# Finds the number of adjacent cloud pixels
+# Finds the number of adjacent values in the input array whose value is 1
 #
-cdef adjCloud(kernel):
+cdef adj(kernel):
 
   nghbors = kernel[range(0, 4) + range(5, 9)]
   cloudNghbors = kernel[np.where(nghbors == 1)]
   cdef int nCloudNghbr = len(cloudNghbors)
   return nCloudNghbr
-
-#
-# Finds the number of adjacent water pixels
-#
-cdef adjWater(kernel):
-
-  nghbors = kernel[range(0, 4) + range(5, 9)]
-  waterNghbors = kernel[np.where(nghbors == 1)]
-  cdef int nWaterNghbr = len(waterNghbors)
-  return nWaterNghbr
 
 #
 # Creates a mask for context tests (must ignore pixels immediately to the right and left of center)
@@ -45,7 +35,7 @@ cdef makeFootprint(int kSize):
 #
 # Returns the number of valid (non-background fire, non-cloud, non-water) neighbors for context tests
 #
-cdef nValidFilt(kernel, int kSize, int minKsize, int maxKsize):
+cdef nValidFilt(kernel, int kSize, int minKsize):
 
   cdef int nghbrCnt = -4
   kernel = kernel.reshape((kSize, kSize))
@@ -63,7 +53,7 @@ cdef nValidFilt(kernel, int kSize, int minKsize, int maxKsize):
 #
 # Returns the number of neighbors rejected as background fires
 #
-cdef nRejectBGfireFilt(kernel, int kSize, int minKsize, int maxKsize):
+cdef nRejectBGfireFilt(kernel, int kSize, int minKsize):
 
   cdef int nRejectBGfire = -4
   kernel = kernel.reshape((kSize, kSize))
@@ -77,7 +67,7 @@ cdef nRejectBGfireFilt(kernel, int kSize, int minKsize, int maxKsize):
 #
 # Returns number of neighbors rejected as water
 #
-cdef nRejectWaterFilt(kernel, int kSize, int minKsize, int maxKsize):
+cdef nRejectWaterFilt(kernel, int kSize, int minKsize):
 
   cdef int nRejectWater = -4
   kernel = kernel.reshape((kSize, kSize))
@@ -92,7 +82,7 @@ cdef nRejectWaterFilt(kernel, int kSize, int minKsize, int maxKsize):
 #
 # Return the number of neighbours rejected as coastline
 #
-cdef nRejectCoastFilt(kernel, kSize, minKsize, maxKsize):
+cdef nRejectCoastFilt(kernel, int kSize, int minKsize):
 
   cdef int nRejecCoast = -4
   kernel = kernel.reshape((kSize, kSize))
@@ -107,7 +97,7 @@ cdef nRejectCoastFilt(kernel, kSize, minKsize, maxKsize):
 #
 # Returns the number of 'unmasked water' neighbors
 #
-cdef nUnmaskedWaterFilt(kernel, int kSize, int minKsize, int maxKsize):
+cdef nUnmaskedWaterFilt(kernel, int kSize, int minKsize):
 
   cdef int nUnmaskedWater = -4
   kernel = kernel.reshape((kSize, kSize))
@@ -145,7 +135,7 @@ cdef runFilt(band, filtFunc, int minKsize, int maxKsize):
 
   while kSize <= maxKsize:
     filtName = 'bandFilt' + str(kSize)
-    filtBand = ndimage.generic_filter(filtBand, filtFunc, size=kSize, extra_arguments=(kSize, minKsize, maxKsize))
+    filtBand = ndimage.generic_filter(filtBand, filtFunc, size=kSize, extra_arguments=(kSize, minKsize))
     bandFilts[filtName] = filtBand
     kSize += 2
 
@@ -654,7 +644,7 @@ cdef process(filMOD02, HDF03, float minLat, float maxLat, float minLon, float ma
     waterLoc = np.zeros((nRows, nCols), dtype=np.int)
     with np.errstate(invalid='ignore'):
       waterLoc[(potFire == 1) & (waterMask == waterFlag)] = 1
-    nWaterAdj = ndimage.generic_filter(waterLoc, adjWater, size=3)
+    nWaterAdj = ndimage.generic_filter(waterLoc, adj, size=3)
     nRejectedWater = runFilt(waterMask, nRejectWaterFilt, minKsize, maxKsize)
     with np.errstate(invalid='ignore'):
       nRejectedWater[(potFire == 1) & (nRejectedWater < 0) & (invalidMask == 0)] = 0
@@ -798,12 +788,12 @@ cdef process(filMOD02, HDF03, float minLat, float maxLat, float minLon, float ma
       cloudLoc = np.zeros((nRows, nCols), dtype=np.int)
       with np.errstate(invalid='ignore'):
         cloudLoc[cloudMask == cloudFlag] = 1
-      nCloudAdj = ndimage.generic_filter(cloudLoc, adjCloud, size=3)
+      nCloudAdj = ndimage.generic_filter(cloudLoc, adj, size=3)
 
       waterLoc = np.zeros((nRows, nCols), dtype=np.int)
       with np.errstate(invalid='ignore'):
         waterLoc[waterMask == waterFlag] = 1
-      nWaterAdj = ndimage.generic_filter(waterLoc, adjWater, size=3)
+      nWaterAdj = ndimage.generic_filter(waterLoc, adj, size=3)
 
       # Fire detection confidence test 17
       z4 = b22minusBG / b22MADfilt
