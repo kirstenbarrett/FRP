@@ -260,7 +260,7 @@ def makeFootprint(kSize):
 #
 # Returns the number of valid (non-background fire, non-cloud, non-water) neighbors for context tests
 #
-def nValidFilt(kernel, kSize, minKsize, maxKsize):
+def nValidFilt(kernel, kSize, minKsize):
   nghbrCnt = -4
   kernel = kernel.reshape((kSize, kSize))
 
@@ -278,7 +278,7 @@ def nValidFilt(kernel, kSize, minKsize, maxKsize):
 #
 # Returns the number of neighbors rejected as background fires
 #
-def nRejectBGfireFilt(kernel, kSize, minKsize, maxKsize):
+def nRejectBGfireFilt(kernel, kSize, minKsize):
   nRejectBGfire = -4
   kernel = kernel.reshape((kSize, kSize))
   centerVal = kernel[((kSize - 1) / 2), ((kSize - 1) / 2)]
@@ -292,7 +292,7 @@ def nRejectBGfireFilt(kernel, kSize, minKsize, maxKsize):
 #
 # Returns number of neighbors rejected as water
 #
-def nRejectWaterFilt(kernel, kSize, minKsize, maxKsize):
+def nRejectWaterFilt(kernel, kSize, minKsize):
   nRejectWater = -4
   kernel = kernel.reshape((kSize, kSize))
 
@@ -307,7 +307,7 @@ def nRejectWaterFilt(kernel, kSize, minKsize, maxKsize):
 #
 # Returns the number of 'unmasked water' neighbors
 #
-def nUnmaskedWaterFilt(kernel, kSize, minKsize, maxKsize):
+def nUnmaskedWaterFilt(kernel, kSize, minKsize):
   nUnmaskedWater = -4
   kernel = kernel.reshape((kSize, kSize))
 
@@ -344,7 +344,7 @@ def runFilt(band, filtFunc, minKsize, maxKsize):
 
   while kSize <= maxKsize:
     filtName = 'bandFilt' + str(kSize)
-    filtBand = ndimage.generic_filter(filtBand, filtFunc, size=kSize, extra_arguments=(kSize, minKsize, maxKsize))
+    filtBand = ndimage.generic_filter(filtBand, filtFunc, size=kSize, extra_arguments=(kSize, minKsize))
     bandFilts[filtName] = filtBand
     kSize += 2
 
