@@ -645,10 +645,10 @@ cdef process(filMOD02, HDF03, float minLat, float maxLat, float minLon, float ma
       b22firesAllMask = allFires * allArrays['BAND22']
       b22bgAllMask = allFires * b22meanFilt
 
-      b22maskEXP = b22firesAllMask.astype(float) ** 8
-      b22bgEXP = b22bgAllMask.astype(float) ** 8
+      b22maskEXP = np.power(b22firesAllMask, 8)
+      b22bgEXP = np.power(b22bgAllMask, 8)
 
-      frpMW = 4.34 * (10 ** (-19)) * (b22maskEXP - b22bgEXP)
+      frpMW = (4.34 * (math.pow(10, -19))) * (b22maskEXP - b22bgEXP)
 
       # Detection confidence (Giglio 2003, Section 2.3)
       cloudLoc = np.zeros((nRows, nCols), dtype=np.int)
