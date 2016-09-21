@@ -786,8 +786,8 @@ cdef process(filMOD02, HDF03, float minLat, float maxLat, float minLon, float ma
 
       # FRP equation 16 (Giglio 2016, Section 3.8)
 
-      StBo = 5.6704 * (10 ** (-8)) #Stephan Boltzmann constant
-      alpha = 3.0 * (10 ** (-9))
+      StBo = 5.6704 * math.pow(10, -8) #Stephan Boltzmann constant
+      alpha = 3.0 * math.pow(10, -9)
       tau4 = 1
 
       R22meanFilt, notNeeded = meanMadFilt(waterMask, croppedArrays['R22'], maxKsize, minKsize, footprintx, footprinty, ksizes, minNcount, minNfrac)
