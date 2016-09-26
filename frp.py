@@ -721,6 +721,56 @@ def process(filMOD02, commandLineArgs, cwd, directory):
 
     [nRows, nCols] = np.shape(croppedArrays['BAND22'])
 
+    # Test for B22 saturation - replace with values from B21
+    croppedArrays['BAND22'][np.where(croppedArrays['BAND22'] >= b22saturationVal)] = croppedArrays['BAND21'][
+      np.where(croppedArrays['BAND22'] >= b22saturationVal)]
+
+    # Test for R22 saturation - replace with values from R21
+    croppedArrays['R22'][np.where(croppedArrays['BAND22'] >= b22saturationVal)] = croppedArrays['R21'][
+      np.where(croppedArrays['BAND22'] >= b22saturationVal)]
+
+    # Day/Night flag (Giglio, 2016 Section 3.2)
+    dayFlag = np.zeros((nRows, nCols), dtype=np.int)
+    dayFlag[np.where(croppedArrays['SolarZenith'] < 8500)] = 1
+
+    # Create water mask
+    waterMask = np.zeros((nRows, nCols), dtype=np.int)
+    waterMask[np.where(croppedArrays['LANDMASK'] != 1)] = waterFlag
+
+    # Create cloud mask (Giglio, 2016 Section 3.2)
+    cloudMask = np.zeros((nRows, nCols), dtype=np.int)
+    cloudMask[((croppedArrays['BAND1x1k'] + croppedArrays['BAND2x1k']) > 1200)] = cloudFlag
+    cloudMask[(croppedArrays['BAND32'] < 265)] = cloudFlag
+    cloudMask[((croppedArrays['BAND1x1k'] + croppedArrays['BAND2x1k']) > 700) & (croppedArrays['BAND32'] < 285)] = cloudFlag
+
+    cloudMask2 = np.zeros((nRows, nCols), dtype=np.int)
+    cloudMask2[(croppedArrays['BAND2x1k'] > 250) & (croppedArrays['BAND32'] < 300)] = cloudFlag
+    cloudMask2[np.where(waterMask == waterFlag)] = cloudFlag
+
+    cloudMask[(cloudMask == cloudFlag) & (cloudMask2 == cloudFlag)] = cloudFlag
+
+    # Mask clouds and water from input bands
+    b21CloudWaterMasked = np.copy(croppedArrays['BAND21'])  # ONLY B21
+    b21CloudWaterMasked[np.where(waterMask == waterFlag)] = waterFlag
+    b21CloudWaterMasked[np.where(cloudMask == cloudFlag)] = cloudFlag
+
+    b22CloudWaterMasked = np.copy(croppedArrays['BAND22'])  # HAS B21 VALS WHERE B22 SATURATED
+    b22CloudWaterMasked[np.where(waterMask == waterFlag)] = waterFlag
+    b22CloudWaterMasked[np.where(cloudMask == cloudFlag)] = cloudFlag
+
+    b31CloudWaterMasked = np.copy(croppedArrays['BAND31'])
+    b31CloudWaterMasked[np.where(waterMask == waterFlag)] = waterFlag
+    b31CloudWaterMasked[np.where(cloudMask == cloudFlag)] = cloudFlag
+
+    deltaT = np.abs(croppedArrays['BAND22'] - croppedArrays['BAND31'])
+    deltaTCloudWaterMasked = np.copy(deltaT)
+    deltaTCloudWaterMasked[np.where(waterMask == waterFlag)] = waterFlag
+    deltaTCloudWaterMasked[np.where(cloudMask == cloudFlag)] = cloudFlag
+
+    # Create coastal mask
+    coastalMask = np.zeros((nRows, nCols), dtype=np.int)
+    coastalMask[croppedArrays['LANDMASK'] == 2] = coastFlag
+
     ######################################################
     ######################################################
     ######################################################
@@ -789,8 +839,6 @@ def process(filMOD02, commandLineArgs, cwd, directory):
       Band22copy, meanNeighbours, footprint=meanFootprint, mode='constant', cval=-4
     )
 
-    # Create delta T array
-    deltaT = np.abs(croppedArrays['BAND22'] - croppedArrays['BAND31'])
     # Copy the delta T array
     deltaTcopy = np.copy(deltaT)
     # Apply the invalid masking to the delta t copy
@@ -807,55 +855,6 @@ def process(filMOD02, commandLineArgs, cwd, directory):
     ######################################################
     ######################################################
     ######################################################
-
-    # Test for B22 saturation - replace with values from B21
-    croppedArrays['BAND22'][np.where(croppedArrays['BAND22'] >= b22saturationVal)] = croppedArrays['BAND21'][
-      np.where(croppedArrays['BAND22'] >= b22saturationVal)]
-
-    # Test for R22 saturation - replace with values from R21
-    croppedArrays['R22'][np.where(croppedArrays['BAND22'] >= b22saturationVal)] = croppedArrays['R21'][
-      np.where(croppedArrays['BAND22'] >= b22saturationVal)]
-
-    # Day/Night flag (Giglio, 2016 Section 3.2)
-    dayFlag = np.zeros((nRows, nCols), dtype=np.int)
-    dayFlag[np.where(croppedArrays['SolarZenith'] < 8500)] = 1
-
-    # Create water mask
-    waterMask = np.zeros((nRows, nCols), dtype=np.int)
-    waterMask[np.where(croppedArrays['LANDMASK'] != 1)] = waterFlag
-
-    # Create cloud mask (Giglio, 2016 Section 3.2)
-    cloudMask = np.zeros((nRows, nCols), dtype=np.int)
-    cloudMask[((croppedArrays['BAND1x1k'] + croppedArrays['BAND2x1k']) > 1200)] = cloudFlag
-    cloudMask[(croppedArrays['BAND32'] < 265)] = cloudFlag
-    cloudMask[((croppedArrays['BAND1x1k'] + croppedArrays['BAND2x1k']) > 700) & (croppedArrays['BAND32'] < 285)] = cloudFlag
-
-    cloudMask2 = np.zeros((nRows, nCols), dtype=np.int)
-    cloudMask2[(croppedArrays['BAND2x1k'] > 250) & (croppedArrays['BAND32'] < 300)] = cloudFlag
-    cloudMask2[np.where(waterMask == waterFlag)] = cloudFlag
-
-    cloudMask[(cloudMask == cloudFlag) & (cloudMask2 == cloudFlag)] = cloudFlag
-
-    # Mask clouds and water from input bands
-    b21CloudWaterMasked = np.copy(croppedArrays['BAND21'])  # ONLY B21
-    b21CloudWaterMasked[np.where(waterMask == waterFlag)] = waterFlag
-    b21CloudWaterMasked[np.where(cloudMask == cloudFlag)] = cloudFlag
-
-    b22CloudWaterMasked = np.copy(croppedArrays['BAND22'])  # HAS B21 VALS WHERE B22 SATURATED
-    b22CloudWaterMasked[np.where(waterMask == waterFlag)] = waterFlag
-    b22CloudWaterMasked[np.where(cloudMask == cloudFlag)] = cloudFlag
-
-    b31CloudWaterMasked = np.copy(croppedArrays['BAND31'])
-    b31CloudWaterMasked[np.where(waterMask == waterFlag)] = waterFlag
-    b31CloudWaterMasked[np.where(cloudMask == cloudFlag)] = cloudFlag
-
-    deltaTCloudWaterMasked = np.copy(deltaT)
-    deltaTCloudWaterMasked[np.where(waterMask == waterFlag)] = waterFlag
-    deltaTCloudWaterMasked[np.where(cloudMask == cloudFlag)] = cloudFlag
-
-    # Create coastal mask
-    coastalMask = np.zeros((nRows, nCols), dtype=np.int)
-    coastalMask[croppedArrays['LANDMASK'] == 2] = coastFlag
 
     # Potential fire test (Giglio 2016, Section 3.3)
     potFire = np.zeros((nRows, nCols), dtype=np.int)
