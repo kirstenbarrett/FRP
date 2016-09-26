@@ -464,6 +464,7 @@ def meanMadFilt(waterMask, rawband, minKsize, maxKsize, footprintx, footprinty, 
 # Main function for processing HDFs
 #
 def process(filMOD02, commandLineArgs, cwd, directory):
+
   minNfrac = commandLineArgs.validFraction
   decimal = commandLineArgs.decimal
   minNcount = commandLineArgs.windowObservations
@@ -720,6 +721,68 @@ def process(filMOD02, commandLineArgs, cwd, directory):
 
     [nRows, nCols] = np.shape(croppedArrays['BAND22'])
 
+    ######################################################
+    ######################################################
+    ######################################################
+    ######################################################
+    ######################################################
+    ######################################################
+
+    #### TESTING
+
+    np.set_printoptions(threshold=np.inf)
+
+    TEST = np.arange(0, 9).reshape(3, 3)
+    print TEST
+
+    meanFootprint = np.ones((3, 3), dtype=np.int)
+
+    def test(kernel):
+      print [x for x in kernel if x != -4]
+      print np.mean([x for x in kernel if x != -4])
+      return np.mean([x for x in kernel if x != -4])
+
+    # Get the average of B22 from the mean footprint
+    testAverage = ndimage.generic_filter(
+      TEST, test, footprint=meanFootprint, mode='constant', cval=-4)
+
+    ######################################################
+    ######################################################
+    ######################################################
+    ######################################################
+    ######################################################
+    ######################################################
+
+    #### DYNAMIC MASKING 2016 IMPLEMENTATION
+
+    # The mean footprint, 30 rows, 301 columns
+    meanFootprint = np.ones((30, 301), dtype=np.int)
+
+    # Gets the mean of a flattened array where values do not equal -4
+    def meanNeighbours(kernel):
+
+      return np.mean([x for x in kernel if x != -4])
+
+    # Create the B22 average array
+    B22average = ndimage.generic_filter(
+      croppedArrays['BAND22'], meanNeighbours, footprint=meanFootprint, mode='constant', cval=-4
+    )
+
+    # Create delta T array
+    deltaT = np.abs(croppedArrays['BAND22'] - croppedArrays['BAND31'])
+
+    # Create the Delta T average array
+    DeltaTaverage = ndimage.generic_filter(
+      deltaT, meanNeighbours, footprint=meanFootprint, mode='constant', cval=-4
+    )
+
+    ######################################################
+    ######################################################
+    ######################################################
+    ######################################################
+    ######################################################
+    ######################################################
+
     # Test for B22 saturation - replace with values from B21
     croppedArrays['BAND22'][np.where(croppedArrays['BAND22'] >= b22saturationVal)] = croppedArrays['BAND21'][
       np.where(croppedArrays['BAND22'] >= b22saturationVal)]
@@ -761,7 +824,6 @@ def process(filMOD02, commandLineArgs, cwd, directory):
     b31CloudWaterMasked[np.where(waterMask == waterFlag)] = waterFlag
     b31CloudWaterMasked[np.where(cloudMask == cloudFlag)] = cloudFlag
 
-    deltaT = np.abs(croppedArrays['BAND22'] - croppedArrays['BAND31'])
     deltaTCloudWaterMasked = np.copy(deltaT)
     deltaTCloudWaterMasked[np.where(waterMask == waterFlag)] = waterFlag
     deltaTCloudWaterMasked[np.where(cloudMask == cloudFlag)] = cloudFlag
