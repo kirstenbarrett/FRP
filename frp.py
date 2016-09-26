@@ -730,21 +730,37 @@ def process(filMOD02, commandLineArgs, cwd, directory):
 
     #### TESTING
 
-    np.set_printoptions(threshold=np.inf)
-
-    TEST = np.arange(0, 9).reshape(3, 3)
-    print TEST
-
-    meanFootprint = np.ones((3, 3), dtype=np.int)
-
-    def test(kernel):
-      print [x for x in kernel if x != -4]
-      print np.mean([x for x in kernel if x != -4])
-      return np.mean([x for x in kernel if x != -4])
-
-    # Get the average of B22 from the mean footprint
-    testAverage = ndimage.generic_filter(
-      TEST, test, footprint=meanFootprint, mode='constant', cval=-4)
+    # # Set the print options
+    # np.set_printoptions(threshold=np.inf)
+    #
+    # # Create a 2d array 3 x 3
+    # seq = np.arange(0, 9, dtype=np.float64).reshape(3, 3)
+    # # Change values > 6 to -4 (this tests invalid masking of mean values, sum / total)
+    # np.place(seq, seq>6, [-4])
+    # # Print the sequence
+    # print seq
+    #
+    # # Create the mean footprint
+    # meanFootprint = np.ones((3, 3))
+    #
+    # # Define the test mean function for neighbours
+    # def test(kernel):
+    #   # Print the values used to calculate the mean
+    #   print [x for x in kernel if x != -4]
+    #   # Print the calculated mean
+    #   print np.mean([x for x in kernel if x != -4])
+    #   # Return the mean
+    #   return np.mean([x for x in kernel if x != -4])
+    #
+    # # Get the test average array
+    # testAverage = ndimage.generic_filter(
+    #   seq, test, footprint=meanFootprint, mode='constant', cval=-4)
+    #
+    # # Print the test average result
+    # print testAverage
+    #
+    # # Reset the print options
+    # np.set_printoptions(threshold=np.inf)
 
     ######################################################
     ######################################################
@@ -763,17 +779,26 @@ def process(filMOD02, commandLineArgs, cwd, directory):
 
       return np.mean([x for x in kernel if x != -4])
 
+    # Copy of band 22
+    Band22copy = np.copy(croppedArrays['BAND22'])
+    # Apply the invalid masking to the B22 copy
+    Band22copy[invalidMask == 1] = -4
+
     # Create the B22 average array
     B22average = ndimage.generic_filter(
-      croppedArrays['BAND22'], meanNeighbours, footprint=meanFootprint, mode='constant', cval=-4
+      Band22copy, meanNeighbours, footprint=meanFootprint, mode='constant', cval=-4
     )
 
     # Create delta T array
     deltaT = np.abs(croppedArrays['BAND22'] - croppedArrays['BAND31'])
+    # Copy the delta T array
+    deltaTcopy = np.copy(deltaT)
+    # Apply the invalid masking to the delta t copy
+    deltaTcopy[invalidMask == 1] = -4
 
-    # Create the Delta T average array
+    # Create the delta T average array
     DeltaTaverage = ndimage.generic_filter(
-      deltaT, meanNeighbours, footprint=meanFootprint, mode='constant', cval=-4
+      deltaTcopy, meanNeighbours, footprint=meanFootprint, mode='constant', cval=-4
     )
 
     ######################################################
