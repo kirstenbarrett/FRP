@@ -918,8 +918,8 @@ def process(filMOD02, commandLineArgs, cwd, directory):
       deltaTcopy, meanNeighbours, footprint=meanFootprint, mode='constant', cval=-4
     )
 
+    # Create potential fires
     potFire = np.zeros((nRows, nCols), dtype=np.int)
-    # TODO are ranges inclusive exclusive, needed for both sides
     potFire[
       ((croppedArrays['BAND22'] > B22average + 5) & (B22average + 5 >= 300) & (B22average + 5 <= 330))
       & ((deltaT > DeltaTaverage + 5) & (DeltaTaverage + 5 >= 10) & (DeltaTaverage + 5 <= 35))
