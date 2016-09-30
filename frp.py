@@ -791,7 +791,11 @@ def process(filMOD02, commandLineArgs, cwd, directory):
     # print seq
     #
     # # Create the mean footprint
-    # meanFootprint = np.ones((3, 3))
+    # meanFootprint = np.ones((4, 3))
+    # # Ignore the middle value in the mean calculation
+    # meanFootprint[((4 / 2) - 1), ((3 - 1) / 2)] = 0
+    #
+    # print meanFootprint
     #
     # # Define the test mean function for neighbours
     # def test(kernel):
@@ -829,6 +833,9 @@ def process(filMOD02, commandLineArgs, cwd, directory):
 
     # The mean footprint, 30 rows, 301 columns
     meanFootprint = np.ones((30, 301), dtype=np.int)
+    # TODO what is center on rows as rows is even - there is no middle row
+    # Set the center value to not be included in the mean calculation
+    meanFootprint[((30 / 2) - 1), ((301 - 1) / 2)] = 0
 
     # Gets the mean of a flattened array where values do not equal -4
     def meanNeighbours(kernel):
