@@ -829,17 +829,18 @@ def process(filMOD02, commandLineArgs, cwd, directory):
 
       return np.mean([x for x in kernel if x != -4])
 
-    # Copy of band 22
-    Band22copy = np.copy(croppedArrays['BAND22'])
-    # Apply the invalid masking to the B22 copy
-    Band22copy[invalidMask == 1] = -4
+    # Ignore array
+    ignore = np.zeros((nRows, nCols), dtype=np.int)
 
-    # Apply > 360 in the day and > 320 at night masking to B22 copy array
-    Band22copy[(dayFlag == 1) & (croppedArrays['BAND22'] > (360 * reductionFactor)) & (invalidMask == 0)] = -4
-    Band22copy[(dayFlag == 0) & (croppedArrays['BAND22'] > (320 * reductionFactor)) & (invalidMask == 0)] = -4
+    # Ignore invalid values
+    ignore[invalidMask == 1] = 1
+
+    # Apply > 360 in the day and > 320 at night masking to ignore array
+    ignore[(dayFlag == 1) & (croppedArrays['BAND22'] > (360 * reductionFactor)) & (invalidMask == 0)] = 1
+    ignore[(dayFlag == 0) & (croppedArrays['BAND22'] > (320 * reductionFactor)) & (invalidMask == 0)] = 1
 
     # Ignore clouds
-    Band22copy[(cloudMask == cloudFlag)] = -4
+    ignore[(cloudMask == cloudFlag)] = 1
 
     # Ignore sun glint
 
@@ -859,7 +860,7 @@ def process(filMOD02, commandLineArgs, cwd, directory):
     with np.errstate(invalid='ignore'):
       sgTest8[
         ((thetaG < 10) & (croppedArrays['BAND1x1k'] > 120) & (croppedArrays['BAND2x1k'] > 200)) & (
-        croppedArrays['BAND7x1k'] > 120) & (invalidMask == 0)] = 1
+          croppedArrays['BAND7x1k'] > 120) & (invalidMask == 0)] = 1
 
     # Sun glint test 9 (Giglio 2016, section 3.6.1)
     waterLoc = np.zeros((nRows, nCols), dtype=np.int)
@@ -878,7 +879,12 @@ def process(filMOD02, commandLineArgs, cwd, directory):
     with np.errstate(invalid='ignore'):
       sgAll[(sgTest7 == 1) | (sgTest8 == 1) | (sgTest9 == 1)] = 1
 
-    Band22copy[(sgAll == 1)] = -4
+    ignore[(sgAll == 1)] = 1
+
+    # Copy of band 22
+    Band22copy = np.copy(croppedArrays['BAND22'])
+    # Apply ignore array
+    Band22copy[(ignore == 1)] = -4
 
     # Create the B22 average array
     B22average = ndimage.generic_filter(
@@ -887,8 +893,8 @@ def process(filMOD02, commandLineArgs, cwd, directory):
 
     # Copy the delta T array
     deltaTcopy = np.copy(deltaT)
-    # Apply the invalid masking to the delta t copy
-    deltaTcopy[invalidMask == 1] = -4
+    # Apply ignore array
+    deltaTcopy[(ignore == 1)] = -4
 
     # Create the delta T average array
     DeltaTaverage = ndimage.generic_filter(
