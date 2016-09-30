@@ -840,6 +840,7 @@ def process(filMOD02, commandLineArgs, cwd, directory):
     # Gets the mean of a flattened array where values do not equal -4 or the center value of the window is not -4
     def meanNeighbours(kernel):
 
+      # TODO what is the center value? It depends on the row being 14 or 15
       if kernel[((30 * 301) - 1) / 2] == -4:
 
         return -4
