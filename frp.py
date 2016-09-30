@@ -841,6 +841,45 @@ def process(filMOD02, commandLineArgs, cwd, directory):
     # Ignore clouds
     Band22copy[(cloudMask == cloudFlag)] = -4
 
+    # Ignore sun glint
+
+    # Sun glint rejection 7 (Giglio 2003, section 3.6.1)
+    relAzimuth = croppedArrays['SensorAzimuth'] - croppedArrays['SolarAzimuth']
+    cosThetaG = (np.cos(croppedArrays['SensorZenith']) * np.cos(croppedArrays['SolarZenith'])) - (
+      np.sin(croppedArrays['SensorZenith']) * np.sin(croppedArrays['SolarZenith']) * np.cos(relAzimuth))
+    thetaG = np.arccos(cosThetaG)
+    thetaG = (thetaG / 3.141592) * 180
+
+    sgTest7 = np.zeros((nRows, nCols), dtype=np.int)
+    with np.errstate(invalid='ignore'):
+      sgTest7[(thetaG < 2)] = 1
+
+    # Sun glint test 8 (Giglio 2016, section 3.6.1)
+    sgTest8 = np.zeros((nRows, nCols), dtype=np.int)
+    with np.errstate(invalid='ignore'):
+      sgTest8[
+        ((thetaG < 10) & (croppedArrays['BAND1x1k'] > 120) & (croppedArrays['BAND2x1k'] > 200)) & (
+        croppedArrays['BAND7x1k'] > 120) & (invalidMask == 0)] = 1
+
+    # Sun glint test 9 (Giglio 2016, section 3.6.1)
+    waterLoc = np.zeros((nRows, nCols), dtype=np.int)
+    with np.errstate(invalid='ignore'):
+      waterLoc[(waterMask == waterFlag)] = 1
+    nWaterAdj = ndimage.generic_filter(waterLoc, adj, size=3)
+    nRejectedWater = runFilt(waterMask, nRejectWaterFilt, minKsize, maxKsize)
+    with np.errstate(invalid='ignore'):
+      nRejectedWater[(nRejectedWater < 0) & (invalidMask == 0)] = 0
+
+    sgTest9 = np.zeros((nRows, nCols), dtype=np.int)
+    with np.errstate(invalid='ignore'):
+      sgTest9[((thetaG < 15) & ((nWaterAdj + nRejectedWater) > 0)) & (invalidMask == 0)] = 1
+
+    sgAll = np.zeros((nRows, nCols), dtype=np.int)
+    with np.errstate(invalid='ignore'):
+      sgAll[(sgTest7 == 1) | (sgTest8 == 1) | (sgTest9 == 1)] = 1
+
+    Band22copy[(sgAll == 1)] = -4
+
     # Create the B22 average array
     B22average = ndimage.generic_filter(
       Band22copy, meanNeighbours, footprint=meanFootprint, mode='constant', cval=-4
@@ -952,40 +991,6 @@ def process(filMOD02, commandLineArgs, cwd, directory):
     nightFires = np.zeros((nRows, nCols), dtype=np.int)
     with np.errstate(invalid='ignore'):
       nightFires[(potFire == 1) & ((dayFlag == 0) & ((tests2and3and4 == 1) | test1 == 1)) & (invalidMask == 0)] = 1
-
-    # Sun glint rejection 7 (Giglio 2003, section 3.6.1)
-    relAzimuth = croppedArrays['SensorAzimuth'] - croppedArrays['SolarAzimuth']
-    cosThetaG = (np.cos(croppedArrays['SensorZenith']) * np.cos(croppedArrays['SolarZenith'])) - (
-      np.sin(croppedArrays['SensorZenith']) * np.sin(croppedArrays['SolarZenith']) * np.cos(relAzimuth))
-    thetaG = np.arccos(cosThetaG)
-    thetaG = (thetaG / 3.141592) * 180
-
-    sgTest7 = np.zeros((nRows, nCols), dtype=np.int)
-    with np.errstate(invalid='ignore'):
-      sgTest7[(potFire == 1) & (thetaG < 2)] = 1
-
-    # Sun glint test 8 (Giglio 2016, section 3.6.1)
-    sgTest8 = np.zeros((nRows, nCols), dtype=np.int)
-    with np.errstate(invalid='ignore'):
-      sgTest8[(potFire == 1) & ((thetaG < 10) & (croppedArrays['BAND1x1k'] > 120) & (croppedArrays['BAND2x1k'] > 200)) & (
-        croppedArrays['BAND7x1k'] > 120) & (invalidMask == 0)] = 1
-
-    # Sun glint test 9 (Giglio 2016, section 3.6.1)
-    waterLoc = np.zeros((nRows, nCols), dtype=np.int)
-    with np.errstate(invalid='ignore'):
-      waterLoc[(potFire == 1) & (waterMask == waterFlag)] = 1
-    nWaterAdj = ndimage.generic_filter(waterLoc, adj, size=3)
-    nRejectedWater = runFilt(waterMask, nRejectWaterFilt, minKsize, maxKsize)
-    with np.errstate(invalid='ignore'):
-      nRejectedWater[(potFire == 1) & (nRejectedWater < 0) & (invalidMask == 0)] = 0
-
-    sgTest9 = np.zeros((nRows, nCols), dtype=np.int)
-    with np.errstate(invalid='ignore'):
-      sgTest9[(potFire == 1) & ((thetaG < 15) & ((nWaterAdj + nRejectedWater) > 0)) & (invalidMask == 0)] = 1
-
-    sgAll = np.zeros((nRows, nCols), dtype=np.int)
-    with np.errstate(invalid='ignore'):
-      sgAll[(sgTest7 == 1) | (sgTest8 == 1) | (sgTest9 == 1)] = 1
 
     # Desert boundary rejection (Giglio 2003, section 2.2.7)
     nValid = runFilt(b22bgMask, nValidFilt, minKsize, maxKsize)
