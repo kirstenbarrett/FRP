@@ -833,9 +833,13 @@ def process(filMOD02, commandLineArgs, cwd, directory):
     Band22copy = np.copy(croppedArrays['BAND22'])
     # Apply the invalid masking to the B22 copy
     Band22copy[invalidMask == 1] = -4
+
     # Apply > 360 in the day and > 320 at night masking to B22 copy array
     Band22copy[(dayFlag == 1) & (croppedArrays['BAND22'] > (360 * reductionFactor)) & (invalidMask == 0)] = -4
     Band22copy[(dayFlag == 0) & (croppedArrays['BAND22'] > (320 * reductionFactor)) & (invalidMask == 0)] = -4
+
+    # Ignore clouds
+    Band22copy[(cloudMask == cloudFlag)] = -4
 
     # Create the B22 average array
     B22average = ndimage.generic_filter(
