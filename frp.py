@@ -799,6 +799,12 @@ def process(filMOD02, commandLineArgs, cwd, directory):
     #   print [x for x in kernel if x != -4]
     #   # Print the calculated mean
     #   print np.mean([x for x in kernel if x != -4])
+    #
+    #   # Center value is minus -4 return -4
+    #   if kernel[(((3*3) - 1) / 2)] == -4:
+    #
+    #     return -4
+    #
     #   # Return the mean
     #   return np.mean([x for x in kernel if x != -4])
     #
@@ -826,6 +832,10 @@ def process(filMOD02, commandLineArgs, cwd, directory):
 
     # Gets the mean of a flattened array where values do not equal -4
     def meanNeighbours(kernel):
+
+      if kernel[((30 * 301) - 1) / 2] == -4:
+
+        return -4
 
       return np.mean([x for x in kernel if x != -4])
 
