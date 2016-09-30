@@ -837,7 +837,7 @@ def process(filMOD02, commandLineArgs, cwd, directory):
     # Set the center value to not be included in the mean calculation
     meanFootprint[((30 / 2) - 1), ((301 - 1) / 2)] = 0
 
-    # Gets the mean of a flattened array where values do not equal -4
+    # Gets the mean of a flattened array where values do not equal -4 or the center value of the window is not -4
     def meanNeighbours(kernel):
 
       if kernel[((30 * 301) - 1) / 2] == -4:
