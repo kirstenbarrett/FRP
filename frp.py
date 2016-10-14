@@ -1024,7 +1024,7 @@ def process(filMOD02, commandLineArgs, cwd, directory):
               '"FRP_confidence"'
         os.chdir(cwd)
         np.savetxt(
-          filMOD02.replace('hdf', '') + "csv", exportCSV, delimiter="\t", header=hdr,
+          filMOD02.replace('hdf', '') + "csv", exportCSV, delimiter=",", header=hdr,
           fmt=[
             "%d", # line
             "%d", # sample
