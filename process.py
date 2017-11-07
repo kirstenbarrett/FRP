@@ -6,6 +6,10 @@ import pstats
 import cProfile
 import time
 import cyfrp
+import numpy as np
+
+#to handle a log of negative number issue
+np.seterr(all='raise')
 
 cwd = os.getcwd()
 

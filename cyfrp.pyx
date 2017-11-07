@@ -364,19 +364,25 @@ cdef process(filMOD02, HDF03, float minLat, float maxLat, float minLon, float ma
       B21offset, B22offset, B31offset, B32offset = radOffset[B21index], radOffset[B22index], radOffset[B31index], \
                                                    radOffset[B32index]
 
+      
       B21 = (B21 - B21offset) * B21scale
+      #remove negative numbers post-scaling (B21offset>np.min(B21))
+      B21 = abs(B21)
       T21 = coeff2 / (lambda21and22 * (np.log(coeff1 / (((math.pow(lambda21and22, 5)) * B21) + 1))))
       T21corr = 1.00009 * T21 - 0.05167
       fullArrays['BAND21'] = T21corr #temperature
       fullArrays['R21'] = B21 #radiance
 
       B22 = (B22 - B22offset) * B22scale
+      B22 = abs(B22)
       T22 = coeff2 / (lambda21and22 * (np.log(coeff1 / (((math.pow(lambda21and22, 5)) * B22) + 1))))
       T22corr = 1.00010 * T22 - 0.05332
       fullArrays['BAND22'] = T22corr #temp
       fullArrays['R22'] = B22  #radiance
 
       B31 = (B31 - B31offset) * B31scale
+      #remove negative numbers post-scaling (B21offset>np.min(B21))
+      B31 = abs(B31)
       T31 = coeff2 / (lambda31 * (np.log(coeff1 / (((math.pow(lambda31, 5)) * B31) + 1))))
       T31corr = 1.00046 * T31 - 0.09968
       fullArrays['BAND31'] = T31corr
@@ -549,7 +555,7 @@ cdef process(filMOD02, HDF03, float minLat, float maxLat, float minLon, float ma
     with np.errstate(invalid='ignore'):
       test1[(potFire == 1) & (dayFlag == 1) & (croppedArrays['BAND22'] > (360 * reductionFactor)) & (invalidMask == 0)] = 1
       test1[(potFire == 1) & (dayFlag == 0) & (croppedArrays['BAND22'] > (320 * reductionFactor)) & (invalidMask == 0)] = 1
-
+    
     # Background fire test (Gilio 2003, Section 2.2.3, first paragraph)
     bgMask = np.zeros((nRows, nCols), dtype=np.float64)
     with np.errstate(invalid='ignore'):
@@ -578,7 +584,7 @@ cdef process(filMOD02, HDF03, float minLat, float maxLat, float minLon, float ma
     b22bgRej = np.copy(croppedArrays['BAND22'])
     b22bgRej[(potFire == 1) & (bgMask != bgFlag)] = bgFlag
     b22rejMeanFilt, b22rejMADfilt = meanMadFilt(waterMask, b22bgRej, minKsize, maxKsize, minNcount, minNfrac, footprintx, footprinty, ksizes)
-
+	
     # CONTEXT TESTS - (Giglio 2016, Section 3.5)
     # The number associated with each test is the number of the equation in the paper
 
